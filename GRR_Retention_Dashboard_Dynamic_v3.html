@@ -142,19 +142,6 @@ td.won { color: var(--green); font-weight: 600; }
 .ai-section .sheet-title { background: linear-gradient(135deg, #4B112C, #7B2E8A); }
 .ai-section .sheet-subtitle { background: linear-gradient(135deg, #54B9B3, #7B2E8A); }
 
-.generate-btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: linear-gradient(135deg, var(--plum), #7B2E8A);
-  color: white; border: none; padding: 13px 28px;
-  border-radius: 8px; font-family: inherit; font-weight: 700;
-  font-size: 14px; cursor: pointer; margin: 20px 0; letter-spacing: 0.3px;
-  box-shadow: 0 4px 14px rgba(75,17,44,0.25);
-  transition: all 0.15s;
-}
-.generate-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(75,17,44,0.35); }
-.generate-btn:active { transform: translateY(0); }
-.generate-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-
 .ai-content {
   background: white; border: 1px solid var(--border);
   border-left: 4px solid #7B2E8A; border-radius: 8px;
@@ -167,67 +154,9 @@ td.won { color: var(--green); font-weight: 600; }
 .ai-content ul { margin: 8px 0; padding-left: 22px; }
 .ai-content li { margin: 5px 0; }
 .ai-content strong { color: var(--plum); }
+.ai-content ol { margin: 8px 0; padding-left: 22px; }
 
-.ai-meta { font-size: 11px; color: var(--text-muted); margin: 8px 0 20px; }
-.ai-meta a { color: var(--teal); cursor: pointer; text-decoration: none; }
-.ai-meta a:hover { text-decoration: underline; }
-
-.cursor-blink {
-  display: inline-block; width: 2px; height: 1em; background: #7B2E8A;
-  vertical-align: text-bottom; margin-left: 2px;
-  animation: blink 0.85s step-end infinite;
-}
-@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
-
-.ai-setup-box {
-  background: linear-gradient(135deg, #FAF0FC, #EEF8F7);
-  border: 1px solid var(--border); border-radius: 12px;
-  padding: 32px; max-width: 640px; margin: 28px auto;
-  text-align: center;
-}
-.ai-setup-box h2 { color: var(--plum); font-size: 20px; margin: 0 0 10px; }
-.ai-setup-box p { color: var(--text-muted); font-size: 13px; line-height: 1.6; margin: 0 0 20px; }
-.ai-setup-box .step { display: flex; align-items: flex-start; gap: 14px; text-align: left; margin: 14px 0; padding: 12px 16px; background: white; border-radius: 8px; border: 1px solid var(--border); }
-.ai-setup-box .step-num { background: var(--plum); color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
-.ai-setup-box .step-text { font-size: 12px; color: var(--text); line-height: 1.5; }
-.ai-setup-box .step-text strong { color: var(--plum); }
-
-/* ── SETTINGS MODAL ── */
-.modal-overlay {
-  display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,0.45); z-index: 300;
-  align-items: center; justify-content: center;
-}
-.modal-overlay.open { display: flex; }
-.modal-box {
-  background: white; border-radius: 12px; padding: 32px;
-  max-width: 520px; width: 90%;
-  box-shadow: 0 16px 48px rgba(0,0,0,0.2);
-}
-.modal-box h2 { margin: 0 0 6px; color: var(--plum); font-size: 17px; }
-.modal-box .modal-sub { font-size: 12px; color: var(--text-muted); margin: 0 0 22px; line-height: 1.5; }
-.modal-label { font-size: 11px; font-weight: 700; color: var(--plum); margin: 0 0 5px; display: block; }
-.modal-input {
-  width: 100%; padding: 10px 13px; border: 1px solid var(--border);
-  border-radius: 6px; font-family: inherit; font-size: 13px; margin-bottom: 16px;
-  color: var(--text);
-}
-.modal-input:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(84,185,179,0.15); }
-.modal-select {
-  width: 100%; padding: 10px 13px; border: 1px solid var(--border);
-  border-radius: 6px; font-family: inherit; font-size: 13px; margin-bottom: 20px;
-  color: var(--text); background: white; cursor: pointer;
-}
-.modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
-.btn-primary { background: var(--plum); color: white; border: none; padding: 10px 22px; border-radius: 6px; font-family: inherit; font-weight: 600; font-size: 13px; cursor: pointer; }
-.btn-primary:hover { background: #3a0d21; }
-.btn-secondary { background: white; color: var(--text); border: 1px solid var(--border); padding: 10px 18px; border-radius: 6px; font-family: inherit; font-weight: 500; font-size: 13px; cursor: pointer; }
-.btn-secondary:hover { background: var(--bg); }
-.key-status { font-size: 11px; margin-bottom: 18px; }
-.key-status.saved { color: var(--green); }
-.key-status.missing { color: var(--red); }
-
-/* ── AI ACTION BUTTONS (copy / download) ── */
+/* ── ACTION BUTTONS (copy / download / print) ── */
 .ai-actions { display: none; gap: 8px; margin: 14px 0 4px; }
 .ai-actions.show { display: flex; }
 .ai-action-btn { background: white; color: var(--plum); border: 1px solid var(--border); padding: 7px 14px; border-radius: 6px; font-family: inherit; font-weight: 600; font-size: 12px; cursor: pointer; }
@@ -237,8 +166,7 @@ td.won { color: var(--green); font-weight: 600; }
 @media print {
   body { background: white; font-size: 11px; }
   .topbar, .tabstrip, .upload-zone, .status-bar, .settings-btn, .upload-btn,
-  .team-select, .modal-overlay, .generate-btn, .ai-actions, .ai-meta,
-  #empty-state { display: none !important; }
+  .team-select, .ai-actions, #empty-state { display: none !important; }
   .shell { max-width: none; }
   /* Print every loaded pane, not just the active one */
   .pane { display: block !important; page-break-after: always; }
@@ -262,7 +190,6 @@ td.won { color: var(--green); font-weight: 600; }
   <div class="actions">
     <select class="team-select" id="team-filter" style="display:none"></select>
     <button class="settings-btn" id="print-btn" style="display:none" onclick="window.print()">🖨 Print / PDF</button>
-    <button class="settings-btn" onclick="openSettingsModal()">⚙ AI Settings</button>
     <button class="upload-btn" onclick="document.getElementById('file-input').click()">↻ Upload Power BI export</button>
     <input type="file" id="file-input" accept=".xlsx,.xls,.csv" />
   </div>
@@ -291,7 +218,7 @@ td.won { color: var(--green); font-weight: 600; }
   <div class="tab" data-pane="products">🧰 Product Breakdown</div>
   <div class="tab" data-pane="voice">🗣️ Customer Voice</div>
   <div class="tab" data-pane="trend">📈 12-Week Trend</div>
-  <div class="tab ai-tab" data-pane="ai">🤖 AI Executive Summary</div>
+  <div class="tab ai-tab" data-pane="ai">🧠 Executive Summary</div>
 </div>
 
 <div id="empty-state" class="empty">
@@ -312,26 +239,6 @@ td.won { color: var(--green); font-weight: 600; }
 <div class="pane" id="pane-trend"></div>
 <div class="pane" id="pane-ai"></div>
 
-</div>
-
-<!-- Settings Modal -->
-<div class="modal-overlay" id="settings-modal">
-  <div class="modal-box">
-    <h2>⚙ AI Settings</h2>
-    <p class="modal-sub">The AI Executive Summary tab uses the Claude API to write a plain-English analysis of your retention data. Your API key is stored only in your browser (localStorage) and sent only to Anthropic's servers.</p>
-    <div id="key-status-msg" class="key-status"></div>
-    <label class="modal-label" for="api-key-input">Anthropic API Key</label>
-    <input type="password" class="modal-input" id="api-key-input" placeholder="sk-ant-api03-..." autocomplete="off" />
-    <label class="modal-label" for="model-select">Model</label>
-    <select class="modal-select" id="model-select">
-      <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 — Fast &amp; affordable (~2s)</option>
-      <option value="claude-sonnet-4-6" selected>Claude Sonnet 4.6 — Best quality (~5s)</option>
-    </select>
-    <div class="modal-actions">
-      <button class="btn-secondary" onclick="closeSettingsModal()">Cancel</button>
-      <button class="btn-primary" onclick="saveSettings()">Save &amp; Close</button>
-    </div>
-  </div>
 </div>
 
 <script>
@@ -433,35 +340,6 @@ function findCompetitorMentions(rows) {
     });
   }
   return out.sort((a, b) => b.value - a.value);
-}
-
-// ============================================================
-// SETTINGS — API KEY & MODEL
-// ============================================================
-function getApiKey()  { return localStorage.getItem('grr_anthropic_key') || ''; }
-function getModel()   { return localStorage.getItem('grr_ai_model') || 'claude-sonnet-4-6'; }
-
-function openSettingsModal() {
-  const key = getApiKey();
-  const statusEl = document.getElementById('key-status-msg');
-  statusEl.className = 'key-status ' + (key ? 'saved' : 'missing');
-  statusEl.textContent = key ? '✓ API key saved in this browser.' : '✗ No API key saved yet.';
-  document.getElementById('api-key-input').value = key;
-  document.getElementById('model-select').value = getModel();
-  document.getElementById('settings-modal').classList.add('open');
-}
-function closeSettingsModal() {
-  document.getElementById('settings-modal').classList.remove('open');
-}
-function saveSettings() {
-  const key = document.getElementById('api-key-input').value.trim();
-  const model = document.getElementById('model-select').value;
-  if (key) localStorage.setItem('grr_anthropic_key', key);
-  localStorage.setItem('grr_ai_model', model);
-  closeSettingsModal();
-  showBanner('AI settings saved');
-  // Refresh AI pane if data is loaded
-  if (RAW_DATA.length) renderAI();
 }
 
 // ============================================================
@@ -576,7 +454,7 @@ function render() {
   renderProducts();
   renderVoice();
   renderTrend();
-  renderAI();
+  renderExec();
 }
 
 // Reusable: render an entire tab as title + subtitle + data table
@@ -1225,60 +1103,34 @@ function renderTrend() {
 }
 
 // ============================================================
-// AI EXECUTIVE SUMMARY
+// EXECUTIVE SUMMARY  (100% offline — generated in-browser, no API)
 // ============================================================
+let LAST_SUMMARY_TEXT = '';
 
-// Convert basic markdown to safe HTML (escaping first, then converting syntax)
-function renderMarkdown(raw) {
-  let t = String(raw == null ? '' : raw)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-
-  // Headers
-  t = t.replace(/^### (.+)$/gm, '<h4>$1</h4>');
-  t = t.replace(/^## (.+)$/gm,  '<h3>$1</h3>');
-  t = t.replace(/^# (.+)$/gm,   '<h3>$1</h3>');
-
-  // Bold / italic
-  t = t.replace(/\*\*(.+?)\*\*/g,  '<strong>$1</strong>');
-  t = t.replace(/\*(.+?)\*/g,      '<em>$1</em>');
-
-  // Bullet lists — group consecutive lines starting with "- " into <ul>
-  t = t.replace(/((?:^- .+\n?)+)/gm, match => {
-    const items = match.trim().split('\n').map(l => `<li>${l.replace(/^- /, '')}</li>`).join('');
-    return `<ul>${items}</ul>`;
-  });
-
-  // Numbered lists
-  t = t.replace(/((?:^\d+\. .+\n?)+)/gm, match => {
-    const items = match.trim().split('\n').map(l => `<li>${l.replace(/^\d+\. /, '')}</li>`).join('');
-    return `<ol>${items}</ol>`;
-  });
-
-  // Paragraphs: double newlines → paragraph breaks
-  t = t.replace(/\n\n+/g, '</p><p>');
-  // Single newlines → <br> inside paragraphs
-  t = t.replace(/\n/g, '<br>');
-
-  return '<p>' + t + '</p>';
+// Inline **bold** -> <strong>, with HTML escaping first
+function inlineHtml(s) {
+  return escapeHtml(String(s == null ? '' : s)).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 }
+function inlineText(s) { return String(s == null ? '' : s).replace(/\*\*(.+?)\*\*/g, '$1'); }
 
-function buildAIPrompt() {
-  const open        = getOpen();
-  const incThisWk   = FILTERED.filter(r => inWeek(r, 'Opp Created Date'));
-  const wonThisWk   = FILTERED.filter(r => r['Opp Stage Name']==='Closed Won'  && inWeek(r,'Opp Won Lost Date'));
-  const lostThisWk  = FILTERED.filter(r => r['Opp Stage Name']==='Closed Lost' && inWeek(r,'Opp Won Lost Date'));
+// Pull together every figure the narrative needs from the current FILTERED set
+function computeSummaryStats() {
+  const open       = getOpen();
+  const incThisWk  = FILTERED.filter(r => inWeek(r, 'Opp Created Date'));
+  const wonThisWk  = FILTERED.filter(r => r['Opp Stage Name']==='Closed Won'  && inWeek(r,'Opp Won Lost Date'));
+  const lostThisWk = FILTERED.filter(r => r['Opp Stage Name']==='Closed Lost' && inWeek(r,'Opp Won Lost Date'));
 
   const openVal  = open.reduce((s,r)       => s+(r['DNR Risk']||0), 0);
   const incVal   = incThisWk.reduce((s,r)  => s+(r['DNR Risk']||0), 0);
   const wonVal   = wonThisWk.reduce((s,r)  => s+(r['Amount Saved']||0), 0);
   const lostVal  = lostThisWk.reduce((s,r) => s+(r['DNR Risk']||0), 0);
-  const wr       = (wonVal+lostVal) > 0 ? wonVal/(wonVal+lostVal) : 0;
+  const wr       = (wonVal+lostVal) > 0 ? wonVal/(wonVal+lostVal) : null;
 
-  const uncVal   = lostThisWk.filter(r => UNCONTROLLABLE.has((r['Cause']||'').trim())).reduce((s,r) => s+(r['DNR Risk']||0), 0);
+  const uncList  = lostThisWk.filter(r => UNCONTROLLABLE.has((r['Cause']||'').trim()));
+  const uncVal   = uncList.reduce((s,r) => s+(r['DNR Risk']||0), 0);
   const ctrlLost = lostVal - uncVal;
-  const ctrlWr   = (wonVal+ctrlLost) > 0 ? wonVal/(wonVal+ctrlLost) : 0;
+  const ctrlWr   = (wonVal+ctrlLost) > 0 ? wonVal/(wonVal+ctrlLost) : null;
 
-  // L12W average inbound
   let l12wAvg = 0;
   if (MOST_RECENT_WEEK_END) {
     let totalInb = 0;
@@ -1290,234 +1142,194 @@ function buildAIPrompt() {
     }
     l12wAvg = totalInb / 12;
   }
+  const delta = incVal - l12wAvg;
 
-  const topLosses = [...lostThisWk].sort((a,b) => (b['DNR Risk']||0) - (a['DNR Risk']||0)).slice(0,5);
-  const topWins   = [...wonThisWk].sort((a,b)  => (b['Amount Saved']||0) - (a['Amount Saved']||0)).slice(0,5);
-  const topOpen   = [...open].sort((a,b)       => (b['DNR Risk']||0) - (a['DNR Risk']||0)).slice(0,10);
+  const topWins   = [...wonThisWk].sort((a,b)  => (b['Amount Saved']||0) - (a['Amount Saved']||0));
+  const topLosses = [...lostThisWk].sort((a,b) => (b['DNR Risk']||0)     - (a['DNR Risk']||0));
+  const topOpen   = [...open].sort((a,b)       => (b['DNR Risk']||0)     - (a['DNR Risk']||0));
 
-  // Churn causes summary
+  // Upcoming cancellations in the open book (within 30 days of the period end)
+  const ref = MOST_RECENT_WEEK_END || new Date();
+  const horizon = new Date(ref); horizon.setDate(horizon.getDate() + 30);
+  const floor = MOST_RECENT_WEEK_START || new Date(0);
+  const urgent = open.filter(r => { const d = parseDate(r['Cancel Effective Date']); return d && d >= floor && d <= horizon; })
+    .sort((a,b) => parseDate(a['Cancel Effective Date']) - parseDate(b['Cancel Effective Date']));
+  const urgentVal = urgent.reduce((s,r) => s+(r['DNR Risk']||0), 0);
+
+  // Churn causes this period (by value lost)
   const causes = {};
-  [...open, ...wonThisWk, ...lostThisWk].forEach(r => {
+  [...wonThisWk, ...lostThisWk].forEach(r => {
     const c = (r['Cause'] || '(blank)').trim();
-    if (!causes[c]) causes[c] = { lostVal:0, wonVal:0 };
-    if (r['Opp Stage Name']==='Closed Lost')  causes[c].lostVal += (r['DNR Risk']||0);
-    else if (r['Opp Stage Name']==='Closed Won') causes[c].wonVal += (r['Amount Saved']||0);
+    if (!causes[c]) causes[c] = { lostVal:0, wonVal:0, lostCount:0 };
+    if (r['Opp Stage Name']==='Closed Lost')      { causes[c].lostVal += (r['DNR Risk']||0); causes[c].lostCount++; }
+    else if (r['Opp Stage Name']==='Closed Won')  { causes[c].wonVal  += (r['Amount Saved']||0); }
   });
-  const topCauses = Object.entries(causes).sort((a,b) => b[1].lostVal - a[1].lostVal).slice(0,6);
+  const topCauses = Object.entries(causes).filter(([,v]) => v.lostVal > 0).sort((a,b) => b[1].lostVal - a[1].lostVal);
 
-  // Competitor mentions
-  const compMentions = findCompetitorMentions(FILTERED).map(c =>
-    `${c.name} (${c.category}, ${c.opps} opps, £${Math.round(c.value).toLocaleString()} at risk)`);
+  // Themes mined from notes across the open/at-risk book
+  const descs = FILTERED.map(r => r['Description'] || '');
+  const themes = THEMES.map(t => {
+    const m = FILTERED.filter((r,i) => t.pattern.test(descs[i]));
+    return { name: t.name, opps: m.length, val: m.reduce((s,r) => s+(r['DNR Risk']||0), 0) };
+  }).filter(t => t.opps > 0).sort((a,b) => b.val - a.val);
 
-  const team   = CURRENT_TEAM === '__ALL__' ? 'All team leads combined' : CURRENT_TEAM;
-  const period = weekLabel();
+  const competitors = findCompetitorMentions(FILTERED);
 
-  return `You are a senior retention analytics lead at a hospitality technology company. Based on the weekly GRR (Gross Revenue Retention) pipeline data below, write a concise executive summary for a leadership audience.
-
-Structure your response as follows:
-## Headline Verdict
-One paragraph (2–3 sentences) — was this a good or bad week overall, by value, trend context, and win rate.
-
-## What Happened This Week
-2–4 bullets covering the most important wins, losses, and pipeline movements. Name specific accounts and £ values.
-
-## Pipeline Risk Watch
-1–2 paragraphs on the open pipeline — biggest exposures, any urgent cancellation dates, top churn themes driving risk.
-
-## Competitor & Churn Intelligence
-Brief paragraph on the dominant churn cause(s) this week and any named competitors appearing in notes.
-
-## Recommendations
-3 clear, actionable bullets for the team and leadership — prioritised by urgency.
-
-Write in confident, direct plain English. Use the specific account names and £ values from the data. No waffle — every sentence should inform a decision. Keep it under 450 words.
-
----
-TEAM: ${team}
-PERIOD: ${period}
-
-PIPELINE METRICS:
-- Open pipeline total: £${Math.round(openVal).toLocaleString()} (${open.length} opps)
-- Inbound this week (new at-risk): ${incThisWk.length} opps, £${Math.round(incVal).toLocaleString()}
-- L12W average inbound: £${Math.round(l12wAvg).toLocaleString()} (delta: ${incVal >= l12wAvg ? '+' : ''}£${Math.round(incVal - l12wAvg).toLocaleString()})
-- Closed Won this week: ${wonThisWk.length} saves, £${Math.round(wonVal).toLocaleString()} saved
-- Closed Lost this week: ${lostThisWk.length} losses, £${Math.round(lostVal).toLocaleString()} lost
-- Headline win rate (by value): ${(wr*100).toFixed(1)}%
-- Controllable win rate (excluding uncontrollable causes): ${(ctrlWr*100).toFixed(1)}%
-- Uncontrollable losses: £${Math.round(uncVal).toLocaleString()}
-
-TOP LOSSES THIS WEEK (by value):
-${topLosses.length ? topLosses.map(r=>`- ${r['Account Name']||'?'} | £${Math.round(r['DNR Risk']||0).toLocaleString()} | Cause: ${r['Cause']||'?'} | Product: ${r['Product Family']||'?'} | Notes: ${(r['Description']||'').slice(0,180)}`).join('\n') : '(none)'}
-
-TOP WINS THIS WEEK (by value saved):
-${topWins.length ? topWins.map(r=>`- ${r['Account Name']||'?'} | £${Math.round(r['Amount Saved']||0).toLocaleString()} saved | Cause: ${r['Cause']||'?'} | Notes: ${(r['Description']||'').slice(0,180)}`).join('\n') : '(none)'}
-
-TOP 10 OPEN OPPORTUNITIES AT RISK:
-${topOpen.length ? topOpen.map(r=>`- ${r['Account Name']||'?'} | £${Math.round(r['DNR Risk']||0).toLocaleString()} | Stage: ${r['Opp Stage Name']||'?'} | Cause: ${r['Cause']||'?'} | Cancel date: ${formatDate(r['Cancel Effective Date'])}`).join('\n') : '(none)'}
-
-CHURN CAUSES (this period, top 6 by value lost):
-${topCauses.length ? topCauses.map(([c,v])=>`- ${c}: £${Math.round(v.lostVal).toLocaleString()} lost / £${Math.round(v.wonVal).toLocaleString()} saved`).join('\n') : '(none)'}
-
-COMPETITORS MENTIONED IN NOTES:
-${compMentions.length ? compMentions.join(', ') : '(none detected)'}`;
+  return { open, incThisWk, wonThisWk, lostThisWk, openVal, incVal, wonVal, lostVal, wr,
+    uncList, uncVal, ctrlLost, ctrlWr, l12wAvg, delta, topWins, topLosses, topOpen,
+    urgent, urgentVal, topCauses, themes, competitors };
 }
 
-function renderAI() {
-  const hasKey = !!getApiKey();
-  const model  = getModel();
-  const modelLabel = model.includes('haiku') ? 'Claude Haiku 4.5 (fast)' : 'Claude Sonnet 4.6 (quality)';
+// Build the narrative as an array of sections -> rendered to both HTML and plain text
+function buildSummarySections() {
+  const s = computeSummaryStats();
+  const nm = r => r['Account Name'] || r['Opp Name'] || 'Unnamed account';
+  const sections = [];
 
-  if (!hasKey) {
-    document.getElementById('pane-ai').innerHTML = `
-      <div class="ai-section">
-        <div class="sheet-title">AI EXECUTIVE SUMMARY</div>
-        <div class="sheet-subtitle">Claude AI · Plain-English analysis of your retention data</div>
-        <div class="ai-setup-box">
-          <h2>🤖 AI Executive Summary</h2>
-          <p>This tab uses Claude AI to write a plain-English executive summary of your week's GRR data — headline verdict, what happened, pipeline risks, churn themes, and actionable recommendations.</p>
-          <div class="step">
-            <div class="step-num">1</div>
-            <div class="step-text">Get a free API key at <strong>console.anthropic.com</strong> (starts at $5 credit)</div>
-          </div>
-          <div class="step">
-            <div class="step-num">2</div>
-            <div class="step-text">Click <strong>⚙ AI Settings</strong> in the top-right and paste your key</div>
-          </div>
-          <div class="step">
-            <div class="step-num">3</div>
-            <div class="step-text">Come back here and click <strong>Generate</strong> — the summary streams in real time</div>
-          </div>
-          <button class="generate-btn" style="margin-top:8px" onclick="openSettingsModal()">🔑 Set API Key</button>
-          <p style="font-size:11px;color:var(--text-muted);margin-top:16px">Your key is stored only in this browser. It is sent directly to Anthropic's API and never stored or logged anywhere else.</p>
-        </div>
-      </div>`;
-    return;
+  // 1 — HEADLINE VERDICT
+  let verdict, tone;
+  const hasClosed = (s.wonVal + s.lostVal) > 0;
+  if (!hasClosed)              { verdict = 'a quiet week';   tone = 'neutral'; }
+  else if (s.wr >= 0.6 && s.wonVal >= s.lostVal) { verdict = 'a strong week'; tone = 'good'; }
+  else if (s.wr >= 0.4)        { verdict = 'a mixed week';   tone = 'neutral'; }
+  else                         { verdict = 'a tough week';   tone = 'bad'; }
+
+  const headBlocks = [];
+  let l1 = `This was **${verdict}** for ${nm0(s)} — `;
+  if (hasClosed) {
+    l1 += `**${s.wonThisWk.length}** save${s.wonThisWk.length===1?'':'s'} worth **${fmtGBP(s.wonVal)}** against **${s.lostThisWk.length}** loss${s.lostThisWk.length===1?'':'es'} worth **${fmtGBP(s.lostVal)}**, a win rate by value of **${fmtPct(s.wr)}**.`;
+  } else {
+    l1 += `no opportunities closed in the period, so there is no win rate to report.`;
   }
+  headBlocks.push({ t:'p', v:l1 });
+
+  let l2 = `Inbound at-risk volume of **${fmtGBP(s.incVal)}** (${s.incThisWk.length} new opp${s.incThisWk.length===1?'':'s'}) ran `;
+  if (Math.abs(s.delta) < s.l12wAvg * 0.05) l2 += `broadly **in line with** the 12-week average of ${fmtGBP(s.l12wAvg)}.`;
+  else l2 += `**${s.delta > 0 ? 'above' : 'below'}** the 12-week average of ${fmtGBP(s.l12wAvg)} (${s.delta>0?'+':'−'}${fmtGBP(Math.abs(s.delta))}).`;
+  headBlocks.push({ t:'p', v:l2 });
+
+  if (s.uncList.length > 0 && s.ctrlWr != null) {
+    headBlocks.push({ t:'p', v:`Stripping out **${s.uncList.length}** uncontrollable loss${s.uncList.length===1?'':'es'} (${fmtGBP(s.uncVal)} — ceased trading, M&A or product sunset), the **controllable win rate was ${fmtPct(s.ctrlWr)}**.` });
+  }
+  sections.push({ h:'Headline Verdict', tone, blocks: headBlocks });
+
+  // 2 — WHAT HAPPENED THIS WEEK
+  const happened = [];
+  if (s.wonThisWk.length) {
+    const top = s.topWins.slice(0,3).map(r => `${nm(r)} (${fmtGBP(r['Amount Saved'])})`).join(', ');
+    happened.push(`**Saved ${fmtGBP(s.wonVal)}** across ${s.wonThisWk.length} account${s.wonThisWk.length===1?'':'s'} — biggest: ${top}.`);
+  }
+  if (s.lostThisWk.length) {
+    const big = s.topLosses[0];
+    happened.push(`**Lost ${fmtGBP(s.lostVal)}** across ${s.lostThisWk.length} account${s.lostThisWk.length===1?'':'s'} — largest: ${nm(big)} (${fmtGBP(big['DNR Risk'])}${big['Cause']?`, ${big['Cause']}`:''}).`);
+  }
+  happened.push(`**${s.incThisWk.length}** new at-risk opportunit${s.incThisWk.length===1?'y':'ies'} entered the book this week (${fmtGBP(s.incVal)}).`);
+  if (!s.wonThisWk.length && !s.lostThisWk.length) happened.push(`No opportunities were closed (won or lost) in the period.`);
+  sections.push({ h:'What Happened This Week', blocks:[{ t:'ul', v:happened }] });
+
+  // 3 — PIPELINE RISK WATCH
+  const risk = [];
+  const top3 = s.topOpen.slice(0,3).map(r => `${nm(r)} (${fmtGBP(r['DNR Risk'])})`).join(', ');
+  risk.push({ t:'p', v:`The open pipeline carries **${fmtGBP(s.openVal)}** of DNR risk across **${s.open.length}** opportunit${s.open.length===1?'y':'ies'}.${top3?` The largest exposures are ${top3}.`:''}` });
+  if (s.urgent.length) {
+    const list = s.urgent.slice(0,5).map(r => `${nm(r)} (${fmtGBP(r['DNR Risk'])}, ${formatDate(r['Cancel Effective Date'])})`).join('; ');
+    const oneU = s.urgent.length === 1;
+    risk.push({ t:'p', v:`⏰ **${s.urgent.length} account${oneU?' has a cancellation date':'s have cancellation dates'} within 30 days** totalling **${fmtGBP(s.urgentVal)}** — ${list}. ${oneU?'This needs':'These need'} immediate owner action.` });
+  } else {
+    risk.push({ t:'p', v:`No imminent cancellation dates (within 30 days) are flagged in the open book.` });
+  }
+  if (s.themes.length) {
+    const t = s.themes[0];
+    risk.push({ t:'p', v:`The most common theme in customer notes is **"${t.name}"** (${t.opps} opps, ${fmtGBP(t.val)} at risk)${s.themes[1]?`, followed by "${s.themes[1].name}" (${fmtGBP(s.themes[1].val)})`:''}.` });
+  }
+  sections.push({ h:'Pipeline Risk Watch', blocks: risk });
+
+  // 4 — COMPETITOR & CHURN INTELLIGENCE
+  const intel = [];
+  if (s.topCauses.length) {
+    const [c, v] = s.topCauses[0];
+    intel.push({ t:'p', v:`The dominant churn cause this period was **${c}** (${fmtGBP(v.lostVal)} lost across ${v.lostCount} account${v.lostCount===1?'':'s'})${s.topCauses[1]?`, then ${s.topCauses[1][0]} (${fmtGBP(s.topCauses[1][1].lostVal)})`:''}.` });
+  } else {
+    intel.push({ t:'p', v:`No losses were recorded this period, so there is no dominant churn cause to report.` });
+  }
+  if (s.competitors.length) {
+    const list = s.competitors.slice(0,5).map(c => `**${c.name}** (${c.category}, ${fmtGBP(c.value)})`).join(', ');
+    intel.push({ t:'p', v:`Competitors named in notes: ${list}.` });
+  } else {
+    intel.push({ t:'p', v:`No competitors were explicitly named in customer notes this period.` });
+  }
+  sections.push({ h:'Competitor & Churn Intelligence', blocks: intel });
+
+  // 5 — RECOMMENDATIONS (prioritised, data-driven)
+  const recs = [];
+  if (s.urgent.length) recs.push({ p:1, v:`**Escalate today:** assign owners to the ${s.urgent.length} account${s.urgent.length===1?'':'s'} cancelling within 30 days (${fmtGBP(s.urgentVal)} at risk).` });
+  if (s.topOpen.length) recs.push({ p:2, v:`**Protect the top exposure:** run a retention play on ${nm(s.topOpen[0])} (${fmtGBP(s.topOpen[0]['DNR Risk'])}) — the single largest open risk.` });
+  if (s.competitors.length) { const c = s.competitors[0]; recs.push({ p:3, v:`**Arm the team:** build a battlecard against ${c.name} (${c.category}) — appearing in ${c.opps} opp${c.opps===1?'':'s'} worth ${fmtGBP(c.value)}.` }); }
+  const pricing = s.themes.find(t => /pricing|commercial/i.test(t.name));
+  if (pricing) recs.push({ p:3, v:`**Loop in Finance Business Partner** on pricing/commercial pushback (${fmtGBP(pricing.val)} across ${pricing.opps} opps).` });
+  if (s.ctrlWr != null && s.ctrlWr < 0.5 && s.ctrlLost > 0) recs.push({ p:4, v:`**Run loss post-mortems:** controllable win rate of ${fmtPct(s.ctrlWr)} is below the 50% mark — review what we could have done differently.` });
+  recs.push({ p:5, v:`**Maintain cadence:** keep weekly reviews on the top 10 open opportunities (${fmtGBP(s.topOpen.slice(0,10).reduce((a,r)=>a+(r['DNR Risk']||0),0))} combined).` });
+  recs.sort((a,b) => a.p - b.p);
+  sections.push({ h:'Recommendations', blocks:[{ t:'ol', v: recs.slice(0,5).map(r => r.v) }] });
+
+  return sections;
+}
+function nm0(s) { return CURRENT_TEAM === '__ALL__' ? 'all team leads combined' : CURRENT_TEAM; }
+
+function renderExec() {
+  const sections = buildSummarySections();
+  const team = CURRENT_TEAM === '__ALL__' ? 'All team leads' : CURRENT_TEAM;
+
+  // Build HTML + plain-text in one pass
+  let bodyHtml = '';
+  let bodyText = `GRR Retention — Executive Summary\nTeam: ${team}\nPeriod: ${weekLabel()}\nGenerated: ${new Date().toLocaleString('en-GB')}\n`;
+
+  for (const sec of sections) {
+    bodyHtml += `<h3>${escapeHtml(sec.h)}</h3>`;
+    bodyText += `\n\n${sec.h.toUpperCase()}\n`;
+    for (const b of sec.blocks) {
+      if (b.t === 'p') {
+        bodyHtml += `<p>${inlineHtml(b.v)}</p>`;
+        bodyText += `\n${inlineText(b.v)}\n`;
+      } else if (b.t === 'ul') {
+        bodyHtml += `<ul>${b.v.map(x => `<li>${inlineHtml(x)}</li>`).join('')}</ul>`;
+        bodyText += b.v.map(x => `  • ${inlineText(x)}`).join('\n') + '\n';
+      } else if (b.t === 'ol') {
+        bodyHtml += `<ol>${b.v.map(x => `<li>${inlineHtml(x)}</li>`).join('')}</ol>`;
+        bodyText += b.v.map((x,i) => `  ${i+1}. ${inlineText(x)}`).join('\n') + '\n';
+      }
+    }
+  }
+  LAST_SUMMARY_TEXT = bodyText;
 
   document.getElementById('pane-ai').innerHTML = `
     <div class="ai-section">
-      <div class="sheet-title">AI EXECUTIVE SUMMARY</div>
-      <div class="sheet-subtitle">Claude AI · ${escapeHtml(modelLabel)} · ${escapeHtml(CURRENT_TEAM === '__ALL__' ? 'All team leads' : CURRENT_TEAM)} | ${escapeHtml(weekLabel())}</div>
-      <button class="generate-btn" id="ai-gen-btn" onclick="generateAISummary()">✨ Generate AI Executive Summary</button>
-      <span class="ai-meta">Model: ${escapeHtml(modelLabel)} · <a onclick="openSettingsModal()">change settings</a></span>
-      <div class="ai-actions" id="ai-actions">
-        <button class="ai-action-btn" onclick="copyAISummary()">📋 Copy</button>
-        <button class="ai-action-btn" onclick="downloadAISummary()">⬇ Download .md</button>
+      <div class="sheet-title">EXECUTIVE SUMMARY</div>
+      <div class="sheet-subtitle">${escapeHtml(team)}  |  ${escapeHtml(weekLabel())}  ·  Auto-generated from your uploaded data</div>
+      <div class="ai-actions show" id="ai-actions">
+        <button class="ai-action-btn" onclick="copySummary()">📋 Copy</button>
+        <button class="ai-action-btn" onclick="downloadSummary()">⬇ Download .txt</button>
+        <button class="ai-action-btn" onclick="window.print()">🖨 Print / PDF</button>
       </div>
-      <div id="ai-output"></div>
-      <div class="callout" style="margin-top:20px">⚠ AI-generated narrative from uploaded data only. Verify figures against source before sharing with leadership.</div>
+      <div class="ai-content">${bodyHtml}</div>
+      <div class="callout info" style="margin-top:20px">ℹ This summary is generated entirely in your browser from the uploaded file — no internet connection, no API key, and no data ever leaves your computer. It updates automatically when you change the team filter or upload a new export.</div>
     </div>`;
 }
 
-let LAST_AI_SUMMARY = '';
-
-function aiSummaryHeader() {
-  const team = CURRENT_TEAM === '__ALL__' ? 'All team leads' : CURRENT_TEAM;
-  return `GRR Retention — AI Executive Summary\nTeam: ${team}\nPeriod: ${weekLabel()}\nGenerated: ${new Date().toLocaleString('en-GB')}\n\n`;
-}
-function copyAISummary() {
-  if (!LAST_AI_SUMMARY) return;
-  navigator.clipboard.writeText(aiSummaryHeader() + LAST_AI_SUMMARY)
+function copySummary() {
+  if (!LAST_SUMMARY_TEXT) return;
+  navigator.clipboard.writeText(LAST_SUMMARY_TEXT)
     .then(() => showBanner('Summary copied to clipboard'))
     .catch(() => showBanner('Could not copy', 'error'));
 }
-function downloadAISummary() {
-  if (!LAST_AI_SUMMARY) return;
-  const blob = new Blob([aiSummaryHeader() + LAST_AI_SUMMARY], { type: 'text/markdown' });
+function downloadSummary() {
+  if (!LAST_SUMMARY_TEXT) return;
+  const blob = new Blob([LAST_SUMMARY_TEXT], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const stamp = new Date().toISOString().slice(0,10);
-  a.href = url; a.download = `GRR_Exec_Summary_${stamp}.md`;
+  a.href = url; a.download = `GRR_Exec_Summary_${new Date().toISOString().slice(0,10)}.txt`;
   a.click();
   URL.revokeObjectURL(url);
-}
-
-async function generateAISummary() {
-  const key = getApiKey();
-  if (!key) { openSettingsModal(); return; }
-  document.getElementById('ai-actions')?.classList.remove('show');
-
-  const btn    = document.getElementById('ai-gen-btn');
-  const output = document.getElementById('ai-output');
-  if (!btn || !output) return;
-
-  btn.disabled = true;
-  btn.textContent = '⏳ Generating…';
-  output.innerHTML = `<div class="ai-content" id="ai-stream"><span class="cursor-blink"></span></div>`;
-
-  const streamEl = document.getElementById('ai-stream');
-  let fullText = '';
-
-  const prompt = buildAIPrompt();
-  const model  = getModel();
-
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: 1200,
-        stream: true,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    });
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({ error: { message: `HTTP ${response.status}` } }));
-      throw new Error(err.error?.message || `API error ${response.status}`);
-    }
-
-    const reader  = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop();
-
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const raw = line.slice(6).trim();
-        if (raw === '[DONE]' || !raw) continue;
-        try {
-          const evt = JSON.parse(raw);
-          if (evt.type === 'content_block_delta' && evt.delta?.text) {
-            fullText += evt.delta.text;
-            streamEl.innerHTML = renderMarkdown(fullText) + '<span class="cursor-blink"></span>';
-            streamEl.scrollIntoView({ block: 'nearest' });
-          }
-        } catch (_) { /* skip malformed SSE lines */ }
-      }
-    }
-
-    // Final render without blinking cursor
-    streamEl.innerHTML = renderMarkdown(fullText);
-    LAST_AI_SUMMARY = fullText;
-    document.getElementById('ai-actions')?.classList.add('show');
-    btn.disabled = false;
-    btn.textContent = '↻ Regenerate';
-
-  } catch (err) {
-    streamEl.innerHTML = `
-      <div class="callout" style="margin:0">
-        ❌ <strong>Error:</strong> ${escapeHtml(err.message)}<br>
-        <span style="font-size:11px;margin-top:6px;display:block">
-          Check your API key in ⚙ AI Settings, or open the browser console for details.
-        </span>
-      </div>`;
-    btn.disabled = false;
-    btn.textContent = '↻ Try Again';
-  }
 }
 
 // ============================================================
@@ -1541,11 +1353,6 @@ zone.addEventListener('dragleave',  () => zone.classList.remove('dragging'));
 zone.addEventListener('drop', e => {
   e.preventDefault(); zone.classList.remove('dragging');
   if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
-});
-
-// Close modal on overlay click
-document.getElementById('settings-modal').addEventListener('click', e => {
-  if (e.target === document.getElementById('settings-modal')) closeSettingsModal();
 });
 </script>
 </body>
