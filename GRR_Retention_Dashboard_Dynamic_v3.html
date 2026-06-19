@@ -9,19 +9,19 @@
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <style>
 :root {
-  --plum: #4B112C;
-  --teal: #54B9B3;
-  --teal-light: #D5EBE9;
-  --bg: #DDF1F0;
-  --bg-page: #F5F5F5;
-  --red: #F0183F;
-  --red-soft: #F9D5DD;
-  --green: #00B050;
-  --text: #2F2D2D;
-  --text-muted: #6F6F6F;
-  --border: #C4DEDC;
-  --amber-bg: #FFF2CC;
-  --amber-text: #7E5D08;
+  --plum: #23272E;        /* primary graphite (dark surfaces, titles) */
+  --teal: #F59E0B;        /* accent amber */
+  --teal-light: #FDE6BF;  /* light amber (hover, badges, active tab) */
+  --bg: #F1EFEA;          /* warm light grey (even rows, tab strip) */
+  --bg-page: #F4F3F0;     /* warm grey page background */
+  --red: #E11D48;
+  --red-soft: #FCE0E6;
+  --green: #16A34A;
+  --text: #23272E;
+  --text-muted: #6B7280;
+  --border: #E2DCD0;      /* warm grey border */
+  --amber-bg: #FFF7E6;    /* soft amber callout background */
+  --amber-text: #92660A;
 }
 * { box-sizing: border-box; }
 html, body {
@@ -41,10 +41,10 @@ html, body {
   gap: 16px;
 }
 .topbar h1 { margin: 0; font-size: 18px; font-weight: 600; color: var(--plum); }
-.topbar .sub { font-size: 12px; color: var(--teal); font-weight: 500; margin-top: 2px; }
+.topbar .sub { font-size: 12px; color: #B45309; font-weight: 600; margin-top: 2px; }
 .actions { display: flex; gap: 8px; align-items: center; }
-.upload-btn { background: var(--teal); color: white; border: none; padding: 9px 16px; border-radius: 6px; font-family: inherit; font-weight: 600; font-size: 12px; cursor: pointer; }
-.upload-btn:hover { background: #449994; }
+.upload-btn { background: var(--teal); color: var(--plum); border: none; padding: 9px 16px; border-radius: 6px; font-family: inherit; font-weight: 700; font-size: 12px; cursor: pointer; }
+.upload-btn:hover { background: #D97706; color: white; }
 .settings-btn { background: white; color: var(--plum); border: 1px solid var(--border); padding: 8px 12px; border-radius: 6px; font-family: inherit; font-weight: 600; font-size: 12px; cursor: pointer; }
 .settings-btn:hover { background: var(--teal-light); }
 .team-select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 12px; color: var(--text); background: white; cursor: pointer; }
@@ -65,7 +65,7 @@ input[type="file"] { display: none; }
 .tab:hover { background: white; }
 .tab.active { background: white; color: var(--plum); font-weight: 600; border-top-color: var(--plum); }
 .tab.ai-tab { color: var(--plum); font-weight: 600; }
-.tab.ai-tab.active { border-top-color: #7B2E8A; background: #FAF0FC; }
+.tab.ai-tab.active { border-top-color: var(--teal); background: var(--teal-light); }
 
 .pane { display: none; padding: 0; background: white; min-height: 600px; }
 .pane.active { display: block; }
@@ -73,11 +73,11 @@ input[type="file"] { display: none; }
 /* EXCEL-STYLE LAYOUT */
 .sheet { padding: 24px; }
 .sheet-title { background: var(--plum); color: white; padding: 14px 18px; font-size: 16px; font-weight: 700; text-align: center; border-radius: 4px 4px 0 0; }
-.sheet-subtitle { background: var(--teal); color: white; padding: 10px 18px; font-size: 13px; font-weight: 600; text-align: center; }
+.sheet-subtitle { background: var(--teal); color: var(--plum); padding: 10px 18px; font-size: 13px; font-weight: 700; text-align: center; }
 .section-header { background: var(--plum); color: white; padding: 9px 14px; font-size: 12px; font-weight: 700; margin-top: 16px; }
 
 table { width: 100%; border-collapse: collapse; font-size: 11px; background: white; }
-table thead th { background: var(--teal); color: white; font-weight: 600; padding: 8px 10px; text-align: left; font-size: 11px; }
+table thead th { background: var(--teal); color: var(--plum); font-weight: 700; padding: 8px 10px; text-align: left; font-size: 11px; }
 table tbody td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
 table tbody tr:nth-child(even) { background: var(--bg); }
 table tbody tr:hover { background: var(--teal-light); }
@@ -88,13 +88,13 @@ td.bold { font-weight: 700; color: var(--plum); }
 td.lost { color: var(--red); font-weight: 600; }
 td.won { color: var(--green); font-weight: 600; }
 
-.callout { background: var(--amber-bg); border-left: 4px solid #F9A825; padding: 12px 16px; margin: 16px 0; font-size: 11px; color: var(--amber-text); font-style: italic; line-height: 1.5; }
+.callout { background: var(--amber-bg); border-left: 4px solid #D97706; padding: 12px 16px; margin: 16px 0; font-size: 11px; color: var(--amber-text); font-style: italic; line-height: 1.5; }
 .callout.info { background: var(--teal-light); border-left-color: var(--teal); color: var(--plum); font-style: normal; }
 
 .scrollable { max-height: 700px; overflow-y: auto; border: 1px solid var(--border); }
 
 .product-section { margin-top: 20px; }
-.product-banner { background: var(--teal); color: white; padding: 10px 14px; font-size: 12px; font-weight: 600; }
+.product-banner { background: var(--teal); color: var(--plum); padding: 10px 14px; font-size: 12px; font-weight: 700; }
 
 .story { border: 1px solid var(--border); border-left: 4px solid var(--teal); border-radius: 6px; padding: 14px 16px; margin: 10px 0; background: white; }
 .story.lost { border-left-color: var(--red); }
@@ -106,7 +106,7 @@ td.won { color: var(--green); font-weight: 600; }
 .story.lost .story-head .value { color: var(--red); }
 .story.won .story-head .value { color: var(--green); }
 .story-body { font-size: 12px; line-height: 1.55; color: var(--text); white-space: pre-line; }
-.story-action { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); font-size: 11px; color: var(--teal); font-style: italic; }
+.story-action { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); font-size: 11px; color: #B45309; font-style: italic; }
 
 .badge { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; background: var(--teal-light); color: var(--plum); }
 
@@ -139,12 +139,12 @@ td.won { color: var(--green); font-weight: 600; }
 
 /* ── AI SUMMARY STYLES ── */
 .ai-section { padding: 24px; }
-.ai-section .sheet-title { background: linear-gradient(135deg, #4B112C, #7B2E8A); }
-.ai-section .sheet-subtitle { background: linear-gradient(135deg, #54B9B3, #7B2E8A); }
+.ai-section .sheet-title { background: linear-gradient(135deg, #23272E, #7A5A1E); }
+.ai-section .sheet-subtitle { background: linear-gradient(135deg, #F59E0B, #FBBF24); }
 
 .ai-content {
   background: white; border: 1px solid var(--border);
-  border-left: 4px solid #7B2E8A; border-radius: 8px;
+  border-left: 4px solid var(--teal); border-radius: 8px;
   padding: 28px 32px; line-height: 1.75; font-size: 13.5px; color: var(--text);
   min-height: 120px;
 }
@@ -252,8 +252,8 @@ let MOST_RECENT_WEEK_START = null;
 let MOST_RECENT_WEEK_END = null;
 
 const ACCESS = {
-  plum: '#4B112C', teal: '#54B9B3', tealLight: '#D5EBE9',
-  red: '#F0183F', green: '#00B050', text: '#2F2D2D', burgundy: '#B61B32',
+  plum: '#23272E', teal: '#F59E0B', tealLight: '#FDE6BF',
+  red: '#E11D48', green: '#16A34A', text: '#23272E', burgundy: '#B45309',
 };
 Chart.defaults.font.family = "'Open Sans', sans-serif";
 Chart.defaults.color = ACCESS.text;
