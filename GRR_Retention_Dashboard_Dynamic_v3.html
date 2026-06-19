@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GRR Retention Report — Dynamic (v9 + AI)</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<style>
+:root {
+  --plum: #4B112C;
+  --teal: #54B9B3;
+  --teal-light: #D5EBE9;
+  --bg: #DDF1F0;
+  --bg-page: #F5F5F5;
+  --red: #F0183F;
+  --red-soft: #F9D5DD;
+  --green: #00B050;
+  --text: #2F2D2D;
+  --text-muted: #6F6F6F;
+  --border: #C4DEDC;
+  --amber-bg: #FFF2CC;
+  --amber-text: #7E5D08;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-page); color: var(--text); font-size: 12px;
+}
+.shell { max-width: 1700px; margin: 0 auto; }
+
+/* TOPBAR */
+.topbar {
+  background: white; padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 2px 4px rgba(75,17,44,0.06);
+  gap: 16px;
+}
+.topbar h1 { margin: 0; font-size: 18px; font-weight: 600; color: var(--plum); }
+.topbar .sub { font-size: 12px; color: var(--teal); font-weight: 500; margin-top: 2px; }
+.actions { display: flex; gap: 8px; align-items: center; }
+.upload-btn { background: var(--teal); color: white; border: none; padding: 9px 16px; border-radius: 6px; font-family: inherit; font-weight: 600; font-size: 12px; cursor: pointer; }
+.upload-btn:hover { background: #449994; }
+.settings-btn { background: white; color: var(--plum); border: 1px solid var(--border); padding: 8px 12px; border-radius: 6px; font-family: inherit; font-weight: 600; font-size: 12px; cursor: pointer; }
+.settings-btn:hover { background: var(--teal-light); }
+.team-select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 12px; color: var(--text); background: white; cursor: pointer; }
+
+.upload-zone { border: 2px dashed var(--teal); border-radius: 8px; padding: 30px; background: var(--teal-light); color: var(--plum); font-size: 15px; font-weight: 600; text-align: center; cursor: pointer; margin: 24px; transition: all 0.15s; }
+.upload-zone:hover { background: var(--bg); }
+.upload-zone.dragging { background: var(--bg); border-style: solid; }
+.upload-zone .sub { display: block; margin-top: 8px; font-size: 12px; color: var(--text); font-weight: 400; }
+input[type="file"] { display: none; }
+
+.status-bar { margin: 0 24px 12px; padding: 10px 14px; background: white; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; color: var(--text-muted); display: none; }
+.status-bar.active { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.status-bar strong { color: var(--plum); }
+
+/* TAB STRIP */
+.tabstrip { display: flex; background: var(--bg); border-bottom: 1px solid var(--border); padding: 0 16px; overflow-x: auto; position: sticky; top: 67px; z-index: 99; }
+.tab { padding: 10px 14px; font-size: 12px; font-weight: 500; cursor: pointer; color: var(--text); white-space: nowrap; border-right: 1px solid var(--border); background: var(--bg); border-top: 3px solid transparent; }
+.tab:hover { background: white; }
+.tab.active { background: white; color: var(--plum); font-weight: 600; border-top-color: var(--plum); }
+.tab.ai-tab { color: var(--plum); font-weight: 600; }
+.tab.ai-tab.active { border-top-color: #7B2E8A; background: #FAF0FC; }
+
+.pane { display: none; padding: 0; background: white; min-height: 600px; }
+.pane.active { display: block; }
+
+/* EXCEL-STYLE LAYOUT */
+.sheet { padding: 24px; }
+.sheet-title { background: var(--plum); color: white; padding: 14px 18px; font-size: 16px; font-weight: 700; text-align: center; border-radius: 4px 4px 0 0; }
+.sheet-subtitle { background: var(--teal); color: white; padding: 10px 18px; font-size: 13px; font-weight: 600; text-align: center; }
+.section-header { background: var(--plum); color: white; padding: 9px 14px; font-size: 12px; font-weight: 700; margin-top: 16px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 11px; background: white; }
+table thead th { background: var(--teal); color: white; font-weight: 600; padding: 8px 10px; text-align: left; font-size: 11px; }
+table tbody td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
+table tbody tr:nth-child(even) { background: var(--bg); }
+table tbody tr:hover { background: var(--teal-light); }
+table tbody tr.total { background: var(--teal-light) !important; font-weight: 700; }
+table tbody tr.total td { color: var(--plum); }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.bold { font-weight: 700; color: var(--plum); }
+td.lost { color: var(--red); font-weight: 600; }
+td.won { color: var(--green); font-weight: 600; }
+
+.callout { background: var(--amber-bg); border-left: 4px solid #F9A825; padding: 12px 16px; margin: 16px 0; font-size: 11px; color: var(--amber-text); font-style: italic; line-height: 1.5; }
+.callout.info { background: var(--teal-light); border-left-color: var(--teal); color: var(--plum); font-style: normal; }
+
+.scrollable { max-height: 700px; overflow-y: auto; border: 1px solid var(--border); }
+
+.product-section { margin-top: 20px; }
+.product-banner { background: var(--teal); color: white; padding: 10px 14px; font-size: 12px; font-weight: 600; }
+
+.story { border: 1px solid var(--border); border-left: 4px solid var(--teal); border-radius: 6px; padding: 14px 16px; margin: 10px 0; background: white; }
+.story.lost { border-left-color: var(--red); }
+.story.won { border-left-color: var(--green); }
+.story-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 12px; }
+.story-head .name { font-weight: 700; color: var(--plum); font-size: 14px; }
+.story-head .meta-row { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.story-head .value { font-size: 17px; font-weight: 700; color: var(--plum); white-space: nowrap; }
+.story.lost .story-head .value { color: var(--red); }
+.story.won .story-head .value { color: var(--green); }
+.story-body { font-size: 12px; line-height: 1.55; color: var(--text); white-space: pre-line; }
+.story-action { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); font-size: 11px; color: var(--teal); font-style: italic; }
+
+.badge { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; background: var(--teal-light); color: var(--plum); }
+
+.chart-wrap { position: relative; height: 360px; margin-top: 12px; padding: 12px; background: white; }
+.chart-wrap.tall { height: 400px; }
+.chart-block { margin-top: 16px; background: white; border: 1px solid var(--border); border-radius: 6px; padding: 16px; }
+.chart-block h3 { margin: 0 0 6px 0; font-size: 14px; color: var(--plum); }
+
+.empty { text-align: center; padding: 80px 24px; color: var(--text-muted); }
+.empty h2 { color: var(--plum); margin-bottom: 12px; font-size: 22px; }
+.empty p { max-width: 600px; margin: 0 auto 14px; line-height: 1.6; }
+
+.banner { position: fixed; top: 20px; right: 20px; padding: 14px 22px; border-radius: 8px; font-weight: 600; z-index: 1000; }
+.banner.success { background: var(--green); color: white; box-shadow: 0 4px 12px rgba(0,176,80,0.3); }
+.banner.error { background: var(--red); color: white; box-shadow: 0 4px 12px rgba(240,24,63,0.3); }
+
+/* ── AI SUMMARY STYLES ── */
+.ai-section { padding: 24px; }
+.ai-section .sheet-title { background: linear-gradient(135deg, #4B112C, #7B2E8A); }
+.ai-section .sheet-subtitle { background: linear-gradient(135deg, #54B9B3, #7B2E8A); }
+
+.generate-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: linear-gradient(135deg, var(--plum), #7B2E8A);
+  color: white; border: none; padding: 13px 28px;
+  border-radius: 8px; font-family: inherit; font-weight: 700;
+  font-size: 14px; cursor: pointer; margin: 20px 0; letter-spacing: 0.3px;
+  box-shadow: 0 4px 14px rgba(75,17,44,0.25);
+  transition: all 0.15s;
+}
+.generate-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(75,17,44,0.35); }
+.generate-btn:active { transform: translateY(0); }
+.generate-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+.ai-content {
+  background: white; border: 1px solid var(--border);
+  border-left: 4px solid #7B2E8A; border-radius: 8px;
+  padding: 28px 32px; line-height: 1.75; font-size: 13.5px; color: var(--text);
+  min-height: 120px;
+}
+.ai-content h3 { color: var(--plum); margin: 20px 0 8px; font-size: 15px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+.ai-content h4 { color: var(--plum); margin: 14px 0 6px; font-size: 13px; }
+.ai-content p { margin: 10px 0; }
+.ai-content ul { margin: 8px 0; padding-left: 22px; }
+.ai-content li { margin: 5px 0; }
+.ai-content strong { color: var(--plum); }
+
+.ai-meta { font-size: 11px; color: var(--text-muted); margin: 8px 0 20px; }
+.ai-meta a { color: var(--teal); cursor: pointer; text-decoration: none; }
+.ai-meta a:hover { text-decoration: underline; }
+
+.cursor-blink {
+  display: inline-block; width: 2px; height: 1em; background: #7B2E8A;
+  vertical-align: text-bottom; margin-left: 2px;
+  animation: blink 0.85s step-end infinite;
+}
+@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+
+.ai-setup-box {
+  background: linear-gradient(135deg, #FAF0FC, #EEF8F7);
+  border: 1px solid var(--border); border-radius: 12px;
+  padding: 32px; max-width: 640px; margin: 28px auto;
+  text-align: center;
+}
+.ai-setup-box h2 { color: var(--plum); font-size: 20px; margin: 0 0 10px; }
+.ai-setup-box p { color: var(--text-muted); font-size: 13px; line-height: 1.6; margin: 0 0 20px; }
+.ai-setup-box .step { display: flex; align-items: flex-start; gap: 14px; text-align: left; margin: 14px 0; padding: 12px 16px; background: white; border-radius: 8px; border: 1px solid var(--border); }
+.ai-setup-box .step-num { background: var(--plum); color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+.ai-setup-box .step-text { font-size: 12px; color: var(--text); line-height: 1.5; }
+.ai-setup-box .step-text strong { color: var(--plum); }
+
+/* ── SETTINGS MODAL ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45); z-index: 300;
+  align-items: center; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal-box {
+  background: white; border-radius: 12px; padding: 32px;
+  max-width: 520px; width: 90%;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.2);
+}
+.modal-box h2 { margin: 0 0 6px; color: var(--plum); font-size: 17px; }
+.modal-box .modal-sub { font-size: 12px; color: var(--text-muted); margin: 0 0 22px; line-height: 1.5; }
+.modal-label { font-size: 11px; font-weight: 700; color: var(--plum); margin: 0 0 5px; display: block; }
+.modal-input {
+  width: 100%; padding: 10px 13px; border: 1px solid var(--border);
+  border-radius: 6px; font-family: inherit; font-size: 13px; margin-bottom: 16px;
+  color: var(--text);
+}
+.modal-input:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(84,185,179,0.15); }
+.modal-select {
+  width: 100%; padding: 10px 13px; border: 1px solid var(--border);
+  border-radius: 6px; font-family: inherit; font-size: 13px; margin-bottom: 20px;
+  color: var(--text); background: white; cursor: pointer;
+}
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.btn-primary { background: var(--plum); color: white; border: none; padding: 10px 22px; border-radius: 6px; font-family: inherit; font-weight: 600; font-size: 13px; cursor: pointer; }
+.btn-primary:hover { background: #3a0d21; }
+.btn-secondary { background: white; color: var(--text); border: 1px solid var(--border); padding: 10px 18px; border-radius: 6px; font-family: inherit; font-weight: 500; font-size: 13px; cursor: pointer; }
+.btn-secondary:hover { background: var(--bg); }
+.key-status { font-size: 11px; margin-bottom: 18px; }
+.key-status.saved { color: var(--green); }
+.key-status.missing { color: var(--red); }
+</style>
+</head>
+<body>
+<div class="shell">
+
+<div class="topbar">
+  <div>
+    <h1>GRR Retention Report — Web</h1>
+    <div class="sub" id="meta-info">Dynamic dashboard · Upload a Power BI export to begin</div>
+  </div>
+  <div class="actions">
+    <select class="team-select" id="team-filter" style="display:none"></select>
+    <button class="settings-btn" onclick="openSettingsModal()">⚙ AI Settings</button>
+    <button class="upload-btn" onclick="document.getElementById('file-input').click()">↻ Upload Power BI export</button>
+    <input type="file" id="file-input" accept=".xlsx,.xls,.csv" />
+  </div>
+</div>
+
+<div class="upload-zone" id="upload-zone">
+  📤 Drop your Power BI Data Tables export here, or click to browse
+  <span class="sub">Any team mix, any period. The dashboard auto-detects the most recent week as 'this week'.</span>
+</div>
+
+<div class="status-bar" id="status-bar">
+  <div><strong>File:</strong> <span id="status-file">—</span></div>
+  <div><strong>Rows:</strong> <span id="status-rows">—</span></div>
+  <div><strong>Team leads:</strong> <span id="status-teams">—</span></div>
+  <div><strong>"This week":</strong> <span id="status-period">—</span></div>
+</div>
+
+<div class="tabstrip" id="tabstrip" style="display:none">
+  <div class="tab active" data-pane="summary">📊 Summary Dashboard</div>
+  <div class="tab" data-pane="open">📋 Open Opportunities</div>
+  <div class="tab" data-pane="incoming">📥 Incoming this week</div>
+  <div class="tab" data-pane="won">✅ Closed Won this week</div>
+  <div class="tab" data-pane="lost">❌ Closed Lost this week</div>
+  <div class="tab" data-pane="top10">🔝 Top 10 Open</div>
+  <div class="tab" data-pane="churn">📊 Churn &amp; Competitor Intel</div>
+  <div class="tab" data-pane="products">🧰 Product Breakdown</div>
+  <div class="tab" data-pane="voice">🗣️ Customer Voice</div>
+  <div class="tab" data-pane="trend">📈 12-Week Trend</div>
+  <div class="tab ai-tab" data-pane="ai">🤖 AI Executive Summary</div>
+</div>
+
+<div id="empty-state" class="empty">
+  <h2>No data loaded yet</h2>
+  <p>Drop a Power BI Data Tables export above. All 11 tabs of the v9 report will rebuild themselves from the uploaded data — any team mix, any period.</p>
+</div>
+
+<!-- All panes — populated dynamically -->
+<div class="pane" id="pane-summary"></div>
+<div class="pane" id="pane-open"></div>
+<div class="pane" id="pane-incoming"></div>
+<div class="pane" id="pane-won"></div>
+<div class="pane" id="pane-lost"></div>
+<div class="pane" id="pane-top10"></div>
+<div class="pane" id="pane-churn"></div>
+<div class="pane" id="pane-products"></div>
+<div class="pane" id="pane-voice"></div>
+<div class="pane" id="pane-trend"></div>
+<div class="pane" id="pane-ai"></div>
+
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal-box">
+    <h2>⚙ AI Settings</h2>
+    <p class="modal-sub">The AI Executive Summary tab uses the Claude API to write a plain-English analysis of your retention data. Your API key is stored only in your browser (localStorage) and sent only to Anthropic's servers.</p>
+    <div id="key-status-msg" class="key-status"></div>
+    <label class="modal-label" for="api-key-input">Anthropic API Key</label>
+    <input type="password" class="modal-input" id="api-key-input" placeholder="sk-ant-api03-..." autocomplete="off" />
+    <label class="modal-label" for="model-select">Model</label>
+    <select class="modal-select" id="model-select">
+      <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 — Fast &amp; affordable (~2s)</option>
+      <option value="claude-sonnet-4-6" selected>Claude Sonnet 4.6 — Best quality (~5s)</option>
+    </select>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeSettingsModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveSettings()">Save &amp; Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// STATE & CONFIG
+// ============================================================
+let RAW_DATA = [];
+let FILTERED = [];
+let CURRENT_TEAM = '__ALL__';
+let MOST_RECENT_WEEK_START = null;
+let MOST_RECENT_WEEK_END = null;
+
+const ACCESS = {
+  plum: '#4B112C', teal: '#54B9B3', tealLight: '#D5EBE9',
+  red: '#F0183F', green: '#00B050', text: '#2F2D2D', burgundy: '#B61B32',
+};
+Chart.defaults.font.family = "'Open Sans', sans-serif";
+Chart.defaults.color = ACCESS.text;
+
+// 'Closed Skipped' treated as OPEN to match Power BI convention
+const CLOSED_STAGES = new Set(['Closed Won', 'Closed Lost', 'Closed']);
+const UNCONTROLLABLE = new Set(['Business has ceased trading', 'Merger/Acquisition', 'Product', 'Access Cannibalised']);
+
+const fmtGBP = v => v == null || isNaN(v) ? '—' : ((v < 0 ? '−£' : '£') + Math.abs(Math.round(v)).toLocaleString('en-GB'));
+const fmtNum = v => v == null ? '—' : v.toLocaleString('en-GB');
+const fmtPct = v => v == null || isNaN(v) ? '—' : (v * 100).toFixed(1) + '%';
+function parseDate(d) {
+  if (d == null) return null;
+  if (d instanceof Date) return isNaN(d.getTime()) ? null : d;
+  if (typeof d === 'number') {
+    const date = new Date((d - 25569) * 86400 * 1000);
+    return isNaN(date.getTime()) ? null : date;
+  }
+  const date = new Date(d);
+  return isNaN(date.getTime()) ? null : date;
+}
+function formatDate(d) {
+  const dt = parseDate(d);
+  return dt ? dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+}
+function weekStart(d) {
+  const dt = parseDate(d); if (!dt) return null;
+  const day = dt.getDay() || 7;
+  const m = new Date(dt); m.setDate(dt.getDate() - day + 1); m.setHours(0,0,0,0);
+  return m;
+}
+function escapeHtml(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escapeAttr(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+// ============================================================
+// THEMES & COMPETITORS
+// ============================================================
+const THEMES = [
+  { name: 'Pricing / commercials', pattern: /(too expensive|too high|inflated|reduce spend|reduce cost|cost cutting|cost-cutting|budget|cheaper|less expensive|pricing concerns?|price increase|increment)/i, headline: "Customers asking for lower prices or flagging budget cuts." },
+  { name: 'Support / service quality', pattern: /(poor support|bad support|support is|service quality|service level|\bsla\b|response time|slow response)/i, headline: "Frustration with how we're servicing the account." },
+  { name: 'Liquidation / administration', pattern: /(liquidation|administration|insolven|ceased trading|wound up)/i, headline: "Customer business is winding down — uncontrollable churn." },
+  { name: 'Merger / acquisition', pattern: /(\bmerg|\bacqui|\btakeover|bought by|sold to)/i, headline: "Customer being acquired — often forces a tech consolidation." },
+  { name: 'Migrating to competitor', pattern: /(moving to|switching to|migrated to|chose to go with|signed with|going with)/i, headline: "Active competitor displacement in play." },
+  { name: 'Onboarding / setup problems', pattern: /(onboard|setup|never (got |been )?set up|never used|never been used|implementation fail)/i, headline: "Customer never properly onboarded — high-risk churn." },
+  { name: 'Product functionality gaps', pattern: /(missing.{0,20}(feature|function)|doesnt (do|have|work)|not able to|limited functionality|product defect|stock (module|management))/i, headline: "Specific product complaint — feed to product team." },
+  { name: 'Invoice / billing disputes', pattern: /(invoice.{0,20}(dispute|unpaid|outstanding|issue)|billing.{0,15}(dispute|issue|problem)|unpaid invoice)/i, headline: "Commercial friction — needs FBP involvement." },
+];
+
+const COMPETITORS = {
+  'Tevalis': 'EPOS', 'Zonal': 'EPOS', 'Comtrex': 'EPOS', 'NCR': 'EPOS',
+  'Aloha': 'EPOS', 'Toast': 'EPOS', 'Square': 'EPOS', 'Vita Mojo': 'EPOS', 'Revel': 'EPOS', 'Lightspeed': 'EPOS',
+  'SevenRooms': 'Reservations', 'Seven Rooms': 'Reservations', 'ResDiary': 'Reservations',
+  'OpenTable': 'Reservations', 'TheFork': 'Reservations', 'Bookatable': 'Reservations', 'Eveve': 'Reservations',
+  'LightYear': 'Procurement', 'Light Year': 'Procurement', 'Procurant': 'Procurement', 'Marketman': 'Procurement',
+  'KitchenCUT': 'Procurement', 'Apicbase': 'Procurement', 'Foodics': 'Procurement', 'Fourth': 'Procurement',
+  'Flipdish': 'Order/Delivery', 'Deliverect': 'Order/Delivery', 'Mr Yum': 'Order/Delivery', 'Yumpingo': 'Order/Delivery',
+  'Deputy': 'Workforce', 'Quinyx': 'Workforce', 'Planday': 'Workforce', 'Bizimply': 'Workforce', '7shifts': 'Workforce', 'Harri': 'Workforce',
+};
+
+// ============================================================
+// SETTINGS — API KEY & MODEL
+// ============================================================
+function getApiKey()  { return localStorage.getItem('grr_anthropic_key') || ''; }
+function getModel()   { return localStorage.getItem('grr_ai_model') || 'claude-sonnet-4-6'; }
+
+function openSettingsModal() {
+  const key = getApiKey();
+  const statusEl = document.getElementById('key-status-msg');
+  statusEl.className = 'key-status ' + (key ? 'saved' : 'missing');
+  statusEl.textContent = key ? '✓ API key saved in this browser.' : '✗ No API key saved yet.';
+  document.getElementById('api-key-input').value = key;
+  document.getElementById('model-select').value = getModel();
+  document.getElementById('settings-modal').classList.add('open');
+}
+function closeSettingsModal() {
+  document.getElementById('settings-modal').classList.remove('open');
+}
+function saveSettings() {
+  const key = document.getElementById('api-key-input').value.trim();
+  const model = document.getElementById('model-select').value;
+  if (key) localStorage.setItem('grr_anthropic_key', key);
+  localStorage.setItem('grr_ai_model', model);
+  closeSettingsModal();
+  showBanner('AI settings saved');
+  // Refresh AI pane if data is loaded
+  if (RAW_DATA.length) renderAI();
+}
+
+// ============================================================
+// FILE LOADING
+// ============================================================
+function showBanner(msg, type='success') {
+  const el = document.createElement('div'); el.className=`banner ${type}`; el.textContent=msg;
+  document.body.appendChild(el); setTimeout(() => el.remove(), 4000);
+}
+
+function handleFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array', cellDates: true });
+      let best=null, maxR=0;
+      for (const n of wb.SheetNames) {
+        const r = XLSX.utils.decode_range(wb.Sheets[n]['!ref'] || 'A1:A1');
+        if (r.e.r - r.s.r > maxR) { maxR = r.e.r - r.s.r; best = n; }
+      }
+      const json = XLSX.utils.sheet_to_json(wb.Sheets[best], { defval: null, raw: false });
+      if (!json.length) { showBanner('No data rows found', 'error'); return; }
+      RAW_DATA = json.map(normaliseRow).filter(r => r['Opp Name'] || r['Account Name']);
+      if (!RAW_DATA.length) { showBanner('No valid rows found', 'error'); return; }
+      onDataLoaded(file.name);
+      showBanner(`✓ Loaded ${RAW_DATA.length} opportunities`);
+    } catch (err) { console.error(err); showBanner(`Could not parse: ${err.message}`, 'error'); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function normaliseRow(row) {
+  const out = {};
+  for (const k in row) out[k.trim()] = row[k];
+  ['DNR Risk', 'Amount Saved'].forEach(f => {
+    const n = out[f] != null ? parseFloat(String(out[f]).replace(/[^0-9.-]/g, '')) : 0;
+    out[f] = isNaN(n) ? 0 : n;
+  });
+  return out;
+}
+
+function detectMostRecentWeek() {
+  const dates = [];
+  for (const r of RAW_DATA) {
+    const wl = parseDate(r['Opp Won Lost Date']);
+    const cr = parseDate(r['Opp Created Date']);
+    if (wl) dates.push(wl); if (cr) dates.push(cr);
+  }
+  if (!dates.length) { MOST_RECENT_WEEK_START = null; MOST_RECENT_WEEK_END = null; return; }
+  const max = new Date(Math.max(...dates.map(d => d.getTime())));
+  const ws = weekStart(max);
+  const we = new Date(ws); we.setDate(we.getDate() + 6); we.setHours(23,59,59,999);
+  MOST_RECENT_WEEK_START = ws; MOST_RECENT_WEEK_END = we;
+}
+
+function onDataLoaded(fileName) {
+  detectMostRecentWeek();
+  const causes = [...new Set(RAW_DATA.map(r => r['Team']).filter(Boolean))].sort();
+  const sel = document.getElementById('team-filter');
+  sel.innerHTML = `<option value="__ALL__">All team leads (${RAW_DATA.length})</option>` +
+    causes.map(c => `<option value="${escapeAttr(c)}">${escapeHtml(c)} (${RAW_DATA.filter(r => r['Team']===c).length})</option>`).join('');
+  sel.style.display = 'inline-block';
+  document.getElementById('status-bar').classList.add('active');
+  document.getElementById('status-file').textContent = fileName;
+  document.getElementById('status-rows').textContent = RAW_DATA.length;
+  document.getElementById('status-teams').textContent = causes.length;
+  document.getElementById('status-period').textContent = MOST_RECENT_WEEK_START
+    ? `${MOST_RECENT_WEEK_START.toLocaleDateString('en-GB')} – ${MOST_RECENT_WEEK_END.toLocaleDateString('en-GB')}` : '—';
+  document.getElementById('meta-info').innerHTML = `<strong>${RAW_DATA.length}</strong> opps · ${causes.length} team lead${causes.length===1?'':'s'}`;
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('tabstrip').style.display = 'flex';
+  document.getElementById('upload-zone').style.display = 'none';
+  document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('pane-summary').classList.add('active');
+  applyFilter();
+}
+
+function applyFilter() {
+  CURRENT_TEAM = document.getElementById('team-filter').value;
+  FILTERED = (CURRENT_TEAM === '__ALL__') ? RAW_DATA : RAW_DATA.filter(r => r['Team'] === CURRENT_TEAM);
+  render();
+}
+
+function getOpen() { return FILTERED.filter(r => !CLOSED_STAGES.has(r['Opp Stage Name'])); }
+function inWeek(r, f) { if (!MOST_RECENT_WEEK_START) return false; const d = parseDate(r[f]); return d && d >= MOST_RECENT_WEEK_START && d <= MOST_RECENT_WEEK_END; }
+function weekLabel() {
+  if (!MOST_RECENT_WEEK_START) return 'this week';
+  return `${MOST_RECENT_WEEK_START.toLocaleDateString('en-GB', {day:'numeric',month:'short'})} – ${MOST_RECENT_WEEK_END.toLocaleDateString('en-GB', {day:'numeric',month:'short'})}`;
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+let charts = {};
+function destroyCharts() { Object.values(charts).forEach(c => c?.destroy?.()); charts = {}; }
+
+function render() {
+  destroyCharts();
+  renderSummary();
+  renderDataTab('open', getOpen(), 'Open Opportunities', null,
+    ['Opp Name','Account Name','Owner','Team','Product Family','Top Spend Product','DNR Risk','Amount Saved','Opp Created Date','Opp Stage Name','Opp Won Lost Date','Cancel Effective Date','Cause','Next Step']);
+  renderDataTab('incoming', FILTERED.filter(r => inWeek(r,'Opp Created Date')), 'Incoming — ' + weekLabel(), null,
+    ['Opp Name','Account Name','Owner','Team','Product Family','Top Spend Product','DNR Risk','Amount Saved','Opp Created Date','Opp Stage Name','Opp Won Lost Date','Cancel Effective Date','Cause','Case Type','Next Step']);
+  renderDataTab('won', FILTERED.filter(r => r['Opp Stage Name']==='Closed Won' && inWeek(r,'Opp Won Lost Date')), 'Closed Won — ' + weekLabel(), 'won',
+    ['Opp Name','Account Name','Owner','Team','Product Family','Top Spend Product','DNR Risk','Amount Saved','Opp Created Date','Opp Stage Name','Opp Won Lost Date','Cancel Effective Date','Cause','Case Type','Case Reason','Next Step']);
+  renderDataTab('lost', FILTERED.filter(r => r['Opp Stage Name']==='Closed Lost' && inWeek(r,'Opp Won Lost Date')), 'Closed Lost — ' + weekLabel(), 'lost',
+    ['Opp Name','Account Name','Owner','Team','Product Family','Top Spend Product','DNR Risk','Amount Saved','Opp Created Date','Opp Stage Name','Opp Won Lost Date','Cancel Effective Date','Cause','Case Type','Next Step']);
+  renderTop10();
+  renderChurn();
+  renderProducts();
+  renderVoice();
+  renderTrend();
+  renderAI();
+}
+
+// Reusable: render an entire tab as title + subtitle + data table
+function renderDataTab(paneId, data, title, totalType, columns) {
+  const sorted = totalType === 'won'
+    ? [...data].sort((a,b) => (b['Amount Saved']||0) - (a['Amount Saved']||0))
+    : [...data].sort((a,b) => (b['DNR Risk']||0) - (a['DNR Risk']||0));
+  const team = CURRENT_TEAM === '__ALL__' ? 'All team leads' : CURRENT_TEAM;
+
+  let html = `
+    <div class="sheet">
+      <div class="sheet-title">${escapeHtml(title.toUpperCase())}</div>
+      <div class="sheet-subtitle">${escapeHtml(team)} · ${sorted.length} opps</div>
+      <div class="scrollable">
+        <table>
+          <thead><tr>${columns.map(c => `<th class="${isNumericCol(c) ? 'num' : ''}">${escapeHtml(c)}</th>`).join('')}</tr></thead>
+          <tbody>
+  `;
+  if (sorted.length === 0) {
+    html += `<tr><td colspan="${columns.length}" style="text-align:center;color:var(--text-muted);padding:24px;">No opportunities in this view.</td></tr>`;
+  } else {
+    for (const r of sorted) {
+      html += '<tr>';
+      for (let i = 0; i < columns.length; i++) {
+        const col = columns[i];
+        let v = r[col];
+        let cls = '';
+        if (isNumericCol(col)) {
+          cls = 'num';
+          if (typeof v === 'number') {
+            if (col === 'DNR Risk' && totalType === 'lost') cls += ' lost';
+            else if (col === 'Amount Saved' && totalType === 'won') cls += ' won';
+            v = fmtGBP(v);
+          } else { v = v ?? '—'; }
+        } else if (isDateCol(col)) {
+          v = formatDate(v);
+        } else if (i === 0 || i === 1) {
+          cls = 'bold';
+          v = v ?? '—';
+        } else {
+          v = v ?? '—';
+        }
+        html += `<td class="${cls}">${escapeHtml(String(v))}</td>`;
+      }
+      html += '</tr>';
+    }
+    if (totalType && sorted.length > 0) {
+      const totalSaved = sorted.reduce((s, r) => s + (r['Amount Saved'] || 0), 0);
+      const totalRisk  = sorted.reduce((s, r) => s + (r['DNR Risk']    || 0), 0);
+      html += '<tr class="total">';
+      for (let i = 0; i < columns.length; i++) {
+        const col = columns[i];
+        if (i === 0) html += `<td class="bold">TOTAL ${totalType.toUpperCase()}</td>`;
+        else if (col === 'DNR Risk')     html += `<td class="num">${fmtGBP(totalRisk)}</td>`;
+        else if (col === 'Amount Saved') html += `<td class="num">${fmtGBP(totalSaved)}</td>`;
+        else html += '<td></td>';
+      }
+      html += '</tr>';
+    }
+  }
+  html += '</tbody></table></div></div>';
+  document.getElementById('pane-' + paneId).innerHTML = html;
+}
+
+function isNumericCol(c) { return c === 'DNR Risk' || c === 'Amount Saved'; }
+function isDateCol(c) { return c.endsWith('Date'); }
+
+// ============================================================
+// SUMMARY DASHBOARD
+// ============================================================
+function renderSummary() {
+  const open = getOpen();
+  const incThisWk  = FILTERED.filter(r => inWeek(r, 'Opp Created Date'));
+  const wonThisWk  = FILTERED.filter(r => r['Opp Stage Name']==='Closed Won'  && inWeek(r,'Opp Won Lost Date'));
+  const lostThisWk = FILTERED.filter(r => r['Opp Stage Name']==='Closed Lost' && inWeek(r,'Opp Won Lost Date'));
+
+  const openVal = open.reduce((s,r) => s+(r['DNR Risk']||0), 0);
+  const incVal  = incThisWk.reduce((s,r)  => s+(r['DNR Risk']||0), 0);
+  const wonVal  = wonThisWk.reduce((s,r)  => s+(r['Amount Saved']||0), 0);
+  const lostVal = lostThisWk.reduce((s,r) => s+(r['DNR Risk']||0), 0);
+  const wr = (wonVal+lostVal) > 0 ? wonVal/(wonVal+lostVal) : 0;
+
+  let l12wAvg = 0;
+  if (MOST_RECENT_WEEK_END) {
+    let totalInb = 0;
+    for (let i = 0; i < 12; i++) {
+      const we = new Date(MOST_RECENT_WEEK_END); we.setDate(we.getDate() - i*7);
+      const ws = new Date(we); ws.setDate(we.getDate() - 6); ws.setHours(0,0,0,0);
+      const inb = FILTERED.filter(r => { const d = parseDate(r['Opp Created Date']); return d && d >= ws && d <= we; });
+      totalInb += inb.reduce((s,r) => s+(r['DNR Risk']||0), 0);
+    }
+    l12wAvg = totalInb / 12;
+  }
+  const delta = incVal - l12wAvg;
+
+  const team   = CURRENT_TEAM === '__ALL__' ? 'All team leads' : CURRENT_TEAM;
+  const period = weekLabel();
+
+  const topLoss  = [...lostThisWk].sort((a,b) => (b['DNR Risk']||0) - (a['DNR Risk']||0))[0];
+  const uncCount = lostThisWk.filter(r => UNCONTROLLABLE.has((r['Cause']||'').trim())).length;
+  const uncVal   = lostThisWk.filter(r => UNCONTROLLABLE.has((r['Cause']||'').trim())).reduce((s,r) => s+(r['DNR Risk']||0), 0);
+  const ctrlLost = lostVal - uncVal;
+  const ctrlWr   = (wonVal+ctrlLost) > 0 ? wonVal/(wonVal+ctrlLost) : 0;
+
+  let commentary = `Inbound DNR of ${fmtGBP(incVal)} sits ${delta > 0 ? 'above' : 'below'} the L12W average of ${fmtGBP(l12wAvg)} (delta: ${fmtGBP(Math.abs(delta))}). `;
+  if (lostThisWk.length > 0) {
+    commentary += `${lostThisWk.length} losses totalling ${fmtGBP(lostVal)}`;
+    if (topLoss) commentary += ` — biggest: ${topLoss['Account Name']} (${fmtGBP(topLoss['DNR Risk'])})`;
+    commentary += '. ';
+  }
+  if (uncCount > 0) {
+    commentary += `Excluding ${uncCount} uncontrollable loss${uncCount===1?'':'es'} (${fmtGBP(uncVal)}), controllable win rate is ${fmtPct(ctrlWr)} (vs headline ${fmtPct(wr)}). `;
+  }
+  if (wonThisWk.length > 0) {
+    commentary += `${wonThisWk.length} win${wonThisWk.length===1?'':'s'} saved ${fmtGBP(wonVal)}.`;
+  }
+
+  let html = `
+    <div class="sheet">
+      <div class="sheet-title">GRR RETENTION — WEEKLY PIPELINE SUMMARY</div>
+      <div class="sheet-subtitle">${escapeHtml(team)}  |  ${escapeHtml(period)}</div>
+
+      <div class="section-header">INBOUND DNR — ${escapeHtml(period.toUpperCase())}</div>
+      <table>
+        <thead><tr><th>Metric</th><th class="num">Value (£)</th></tr></thead>
+        <tbody>
+          <tr><td>Inbound DNR (This Week)</td><td class="num bold">${fmtGBP(incVal)}</td></tr>
+          <tr><td>L12 Weeks Average</td><td class="num">${fmtGBP(l12wAvg)}</td></tr>
+          <tr><td>Inbound DNR vs L12W Average (Delta)</td><td class="num ${delta>0?'lost':'won'}">${fmtGBP(delta)}</td></tr>
+          <tr><td>Open Pipeline (Total)</td><td class="num bold">${fmtGBP(openVal)}</td></tr>
+        </tbody>
+      </table>
+
+      <div class="section-header">THIS WEEK ACTIVITY</div>
+      <table>
+        <thead><tr><th>Metric</th><th class="num">Count</th><th class="num">Value (£)</th></tr></thead>
+        <tbody>
+          <tr><td>Inbound (new at-risk opps)</td><td class="num">${incThisWk.length}</td><td class="num">${fmtGBP(incVal)}</td></tr>
+          <tr><td>Closed Won (saved)</td><td class="num">${wonThisWk.length}</td><td class="num won">${fmtGBP(wonVal)}</td></tr>
+          <tr><td>Closed Lost</td><td class="num">${lostThisWk.length}</td><td class="num lost">${fmtGBP(lostVal)}</td></tr>
+          <tr class="total"><td class="bold">Win Rate (by value)</td><td class="num">—</td><td class="num">${fmtPct(wr)}</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout">⚠ ${escapeHtml(commentary)}</div>
+
+      <div class="chart-block">
+        <h3>Weekly activity overview</h3>
+        <div class="chart-wrap"><canvas id="chart-summary"></canvas></div>
+      </div>
+    </div>
+  `;
+  document.getElementById('pane-summary').innerHTML = html;
+
+  charts.summary = new Chart(document.getElementById('chart-summary').getContext('2d'), {
+    type: 'bar',
+    data: { labels: ['Open at risk', 'Inbound this wk', 'Won this wk', 'Lost this wk'],
+      datasets: [{ data: [openVal, incVal, wonVal, lostVal],
+        backgroundColor: [ACCESS.plum, ACCESS.teal, ACCESS.green, ACCESS.red], borderRadius: 6 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+      scales: { y: { ticks: { callback: v => '£' + (v/1000).toFixed(0) + 'K' } } } }
+  });
+}
+
+// ============================================================
+// TOP 10 OPEN
+// ============================================================
+function renderTop10() {
+  const open = getOpen();
+  const top  = [...open].sort((a,b) => (b['DNR Risk']||0) - (a['DNR Risk']||0)).slice(0, 10);
+  const team = CURRENT_TEAM === '__ALL__' ? 'All team leads' : CURRENT_TEAM;
+
+  let html = `
+    <div class="sheet">
+      <div class="sheet-title">TOP 10 OPEN OPPORTUNITIES</div>
+      <div class="sheet-subtitle">${escapeHtml(team)} · Sorted by DNR Risk descending</div>
+      <div class="scrollable">
+        <table>
+          <thead><tr>
+            <th>Opp Name</th><th>Account</th><th>Owner</th><th>Team</th><th>Product</th>
+            <th class="num">DNR Risk</th><th class="num">Saved So Far</th><th>Created</th><th>Cancel Date</th>
+            <th>Stage</th><th>Cause</th><th>Case Type</th><th>Next Step</th>
+          </tr></thead>
+          <tbody>
+            ${top.length === 0 ? '<tr><td colspan="13" style="text-align:center;color:var(--text-muted);padding:24px">No open opportunities.</td></tr>' : top.map(r => `
+              <tr>
+                <td>${escapeHtml(r['Opp Name']||'—')}</td>
+                <td class="bold">${escapeHtml(r['Account Name']||'—')}</td>
+                <td>${escapeHtml(r['Owner']||'—')}</td>
+                <td>${escapeHtml(r['Team']||'—')}</td>
+                <td>${escapeHtml(r['Product Family']||'—')}</td>
+                <td class="num bold">${fmtGBP(r['DNR Risk'])}</td>
+                <td class="num">${fmtGBP(r['Amount Saved'])}</td>
+                <td>${formatDate(r['Opp Created Date'])}</td>
+                <td>${formatDate(r['Cancel Effective Date'])}</td>
+                <td>${escapeHtml(r['Opp Stage Name']||'—')}</td>
+                <td>${escapeHtml(r['Cause']||'—')}</td>
+                <td>${escapeHtml(r['Case Type']||'—')}</td>
+                <td>${escapeHtml((r['Next Step']||'').toString().slice(0,150))}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  document.getElementById('pane-top10').innerHTML = html;
+}
+
+// ============================================================
+// CHURN & COMPETITOR INTEL
+// ============================================================
+function renderChurn() {
+  const lost = FILTERED.filter(r => r['Opp Stage Name']==='Closed Lost');
+  const open = getOpen();
+  const won  = FILTERED.filter(r => r['Opp Stage Name']==='Closed Won');
+
+  const causes = {};
+  [...open, ...won, ...lost].forEach(r => {
+    const c = r['Cause'] || '(blank)';
+    if (!causes[c]) causes[c] = { openCount:0, openVal:0, wonCount:0, wonVal:0, lostCount:0, lostVal:0 };
+    if (!CLOSED_STAGES.has(r['Opp Stage Name'])) { causes[c].openCount++; causes[c].openVal += (r['DNR Risk']||0); }
+    else if (r['Opp Stage Name']==='Closed Won')  { causes[c].wonCount++;  causes[c].wonVal  += (r['Amount Saved']||0); }
+    else if (r['Opp Stage Name']==='Closed Lost')  { causes[c].lostCount++; causes[c].lostVal += (r['DNR Risk']||0); }
+  });
+  const causeRows = Object.entries(causes).sort((a,b) => b[1].lostVal - a[1].lostVal);
+
+  const descs = FILTERED.map(r => r['Description'] || '');
+  const compRows = [];
+  const seen = new Set();
+  for (const [comp, cat] of Object.entries(COMPETITORS)) {
+    const canon = comp.replace(/\s+/g,'');
+    if (seen.has(canon)) continue;
+    const re = new RegExp(`\\b${comp.replace(/\s+/g,'\\s*')}\\b`, 'i');
+    const matched = FILTERED.filter((r,i) => re.test(descs[i]));
+    if (!matched.length) continue;
+    seen.add(canon);
+    compRows.push({ name: comp, category: cat, opps: matched.length,
+      value: matched.reduce((s,r) => s+(r['DNR Risk']||0), 0),
+      accounts: matched.slice(0,5).map(r => r['Account Name']).join('; ') });
+  }
+  compRows.sort((a,b) => b.value - a.value);
+
+  const team = CURRENT_TEAM === '__ALL__' ? 'All team leads' : CURRENT_TEAM;
+  let html = `
+    <div class="sheet">
+      <div class="sheet-title">CHURN & COMPETITOR INTELLIGENCE</div>
+      <div class="sheet-subtitle">${escapeHtml(team)} · Based on full uploaded dataset</div>
+
+      <div class="section-header">1. CHURN CAUSE ANALYSIS — BY VOLUME & VALUE</div>
+      <table>
+        <thead><tr>
+          <th>Churn Cause</th>
+          <th class="num">Open Opps</th><th class="num">Open Value (£)</th>
+          <th class="num">Won</th><th class="num">Value Saved (£)</th>
+          <th class="num">Lost</th><th class="num">Value Lost (£)</th>
+          <th class="num">Win Rate</th>
+        </tr></thead>
+        <tbody>
+          ${causeRows.length === 0 ? '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px">No causes recorded in data.</td></tr>' : causeRows.map(([c, v]) => {
+            const total = v.wonVal + v.lostVal;
+            const wr    = total > 0 ? v.wonVal / total : null;
+            return `<tr>
+              <td class="bold">${escapeHtml(c)}</td>
+              <td class="num">${v.openCount}</td><td class="num">${fmtGBP(v.openVal)}</td>
+              <td class="num">${v.wonCount}</td><td class="num won">${fmtGBP(v.wonVal)}</td>
+              <td class="num">${v.lostCount}</td><td class="num lost">${fmtGBP(v.lostVal)}</td>
+              <td class="num">${wr === null ? '—' : fmtPct(wr)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+
+      <div class="section-header">2. COMPETITOR INTELLIGENCE — MENTIONED IN NOTES</div>
+      <table>
+        <thead><tr><th>Competitor</th><th>Category</th><th class="num">Mentions</th><th class="num">Value at Risk (£)</th><th>Sample accounts</th></tr></thead>
+        <tbody>
+          ${compRows.length === 0 ? '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px">No competitors named in notes.</td></tr>' : compRows.map(c => `
+            <tr>
+              <td class="bold">${escapeHtml(c.name)}</td>
+              <td><span class="badge">${escapeHtml(c.category)}</span></td>
+              <td class="num">${c.opps}</td>
+              <td class="num lost">${fmtGBP(c.value)}</td>
+              <td style="font-size:11px;color:var(--text-muted)">${escapeHtml(c.accounts)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+
+      <div class="callout">⚠ Churn cause analysis aggregates the full uploaded dataset (not just 'this week'). Competitor intel is mined by pattern-matching the Description field.</div>
+    </div>
+  `;
+  document.getElementById('pane-churn').innerHTML = html;
+}
+
+// ============================================================
+// PRODUCT BREAKDOWN
+// ============================================================
+function renderProducts() {
+  const open = getOpen();
+  const won  = FILTERED.filter(r => r['Opp Stage Name']==='Closed Won');
+  const lost = FILTERED.filter(r => r['Opp Stage Name']==='Closed Lost');
+  const products = new Set([...open,...won,...lost].map(r => r['Product Family']).filter(Boolean));
+  const productList = [...products].map(p => ({
+    name: p,
+    open: open.filter(r => r['Product Family']===p),
+    won:  won.filter(r  => r['Product Family']===p),
+    lost: lost.filter(r => r['Product Family']===p),
+  })).map(p => ({
+    ...p,
+    openCount: p.open.length, openVal: p.open.reduce((s,r)=>s+(r['DNR Risk']||0),0),
+    wonCount:  p.won.length,  wonVal:  p.won.reduce((s,r)=>s+(r['Amount Saved']||0),0),
+    lostCount: p.lost.length, lostVal: p.lost.reduce((s,r)=>s+(r['DNR Risk']||0),0),
+  })).sort((a,b) => b.openVal - a.openVal);
+
+  const totalOpen  = productList.reduce((s,p) => s+p.openVal, 0);
+  const totalLost  = productList.reduce((s,p) => s+p.lostVal, 0);
+  const totalSaved = productList.reduce((s,p) => s+p.wonVal,  0);
+  const team = CURRENT_TEAM === '__ALL__' ? 'All team leads' : CURRENT_TEAM;
+
+  let html = `
+    <div class="sheet">
+      <div class="sheet-title">PRODUCT FAMILY BREAKDOWN</div>
+      <div class="sheet-subtitle">${escapeHtml(team)} · ${productList.length} product families</div>
+
+      <div class="section-header">DNR EXPOSURE & WIN RATE BY PRODUCT FAMILY</div>
+      <table>
+        <thead><tr>
+          <th>Product Family</th>
+          <th class="num">Open Opps</th><th class="num">Open Value (£)</th>
+          <th class="num">Won Opps</th><th class="num">Saved (£)</th>
+          <th class="num">Lost Opps</th><th class="num">Lost (£)</th>
+          <th class="num">Win Rate</th>
+        </tr></thead>
+        <tbody>
+          ${productList.map(p => {
+            const total = p.wonVal + p.lostVal;
+            const wr    = total > 0 ? p.wonVal/total : null;
+            return `<tr>
+              <td class="bold">${escapeHtml(p.name)}</td>
+              <td class="num">${p.openCount}</td><td class="num">${fmtGBP(p.openVal)}</td>
+              <td class="num">${p.wonCount}</td><td class="num won">${fmtGBP(p.wonVal)}</td>
+              <td class="num">${p.lostCount}</td><td class="num lost">${fmtGBP(p.lostVal)}</td>
+              <td class="num">${wr === null ? 'n/a' : fmtPct(wr)}</td>
+            </tr>`;
+          }).join('')}
+          <tr class="total">
+            <td>TOTAL</td>
+            <td class="num">${productList.reduce((s,p)=>s+p.openCount,0)}</td>
+            <td class="num">${fmtGBP(totalOpen)}</td>
+            <td class="num">${productList.reduce((s,p)=>s+p.wonCount,0)}</td>
+            <td class="num">${fmtGBP(totalSaved)}</td>
+            <td class="num">${productList.reduce((s,p)=>s+p.lostCount,0)}</td>
+            <td class="num">${fmtGBP(totalLost)}</td>
+            <td class="num">${fmtPct(totalSaved/(totalSaved+totalLost))}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout">⚠ Sorted by total open exposure descending. Products showing £0 open and high lost values are typically end-of-life or sunset products (uncontrollable churn).</div>
+
+      <div class="section-header">DETAILED DRILL-DOWN — OPEN OPPS BY PRODUCT FAMILY</div>
+      ${productList.filter(p => p.openCount > 0).map(p => `
+        <div class="product-section">
+          <div class="product-banner">${escapeHtml(p.name)} · ${p.openCount} open opp${p.openCount===1?'':'s'} · ${fmtGBP(p.openVal)} at risk${p.wonCount+p.lostCount > 0 ? ` · this period: ${p.wonCount} won (${fmtGBP(p.wonVal)}) / ${p.lostCount} lost (${fmtGBP(p.lostVal)})` : ''}</div>
+          <table>
+            <thead><tr><th>Account</th><th>Owner</th><th class="num">DNR Risk</th><th>Stage</th><th>Cancel Date</th><th>Cause</th><th>Next Step</th></tr></thead>
+            <tbody>
+              ${[...p.open].sort((a,b) => (b['DNR Risk']||0) - (a['DNR Risk']||0)).map(r => `
+                <tr>
+                  <td class="bold">${escapeHtml(r['Account Name']||'—')}</td>
+                  <td>${escapeHtml(r['Owner']||'—')}</td>
+                  <td class="num">${fmtGBP(r['DNR Risk'])}</td>
+                  <td>${escapeHtml(r['Opp Stage Name']||'—')}</td>
+                  <td>${formatDate(r['Cancel Effective Date'])}</td>
+                  <td>${escapeHtml(r['Cause']||'—')}</td>
+                  <td>${escapeHtml((r['Next Step']||'').toString().slice(0,100))}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  document.getElementById('pane-products').innerHTML = html;
+}
+
+// ============================================================
+// CUSTOMER VOICE
+// ============================================================
+function renderVoice() {
+  const descs = FILTERED.map(r => r['Description'] || '');
+  const totalOpenVal = getOpen().reduce((s,r) => s+(r['DNR Risk']||0), 0);
+
+  const themeRows = THEMES.map(t => {
+    const matched = FILTERED.filter((r,i) => t.pattern.test(descs[i]));
+    return {
+      name: t.name, headline: t.headline,
+      opps: matched.length,
+      value: matched.reduce((s,r) => s+(r['DNR Risk']||0), 0),
+      top3: matched.sort((a,b) => (b['DNR Risk']||0) - (a['DNR Risk']||0)).slice(0,3)
+        .map(r => `${r['Account Name']} (${fmtGBP(r['DNR Risk'])})`).join('; ')
+    };
+  }).filter(t => t.opps > 0).sort((a,b) => b.value - a.value);
+
+  const compRows = [];
+  const seen = new Set();
+  for (const [comp, cat] of Object.entries(COMPETITORS)) {
+    const canon = comp.replace(/\s+/g,'');
+    if (seen.has(canon)) continue;
+    const re = new RegExp(`\\b${comp.replace(/\s+/g,'\\s*')}\\b`, 'i');
+    const matched = FILTERED.filter((r,i) => re.test(descs[i]));
+    if (!matched.length) continue;
+    seen.add(canon);
+    compRows.push({ name: comp, category: cat, opps: matched.length,
+      value: matched.reduce((s,r) => s+(r['DNR Risk']||0), 0),
+      accounts: matched.map(r => `${r['Account Name']} (${fmtGBP(r['DNR Risk'])})`).join('; ') });
+  }
+  compRows.sort((a,b) => b.value - a.value);
+
+  const openTop  = getOpen().sort((a,b) => (b['DNR Risk']||0) - (a['DNR Risk']||0)).slice(0,10);
+  const lostTop  = FILTERED.filter(r => r['Opp Stage Name']==='Closed Lost' && inWeek(r,'Opp Won Lost Date'))
+    .sort((a,b) => (b['DNR Risk']||0) - (a['DNR Risk']||0)).slice(0,10);
+  const wonAll   = FILTERED.filter(r => r['Opp Stage Name']==='Closed Won' && inWeek(r,'Opp Won Lost Date'))
+    .sort((a,b) => (b['Amount Saved']||0) - (a['Amount Saved']||0));
+
+  const team = CURRENT_TEAM === '__ALL__' ? 'All team leads' : CURRENT_TEAM;
+
+  let html = `
+    <div class="sheet">
+      <div class="sheet-title">CUSTOMER VOICE — WHAT OUR CUSTOMERS ARE TELLING US</div>
+      <div class="sheet-subtitle">${escapeHtml(team)}  |  ${escapeHtml(weekLabel())}  |  Verbatim from Retention Specialist notes</div>
+
+      <div class="callout info">🗣 This tab puts the customer's voice at the centre of the report. Themes and named competitors are mined from the Description field.</div>
+
+      <div class="section-header">1. RECURRING THEMES IN CUSTOMER FEEDBACK</div>
+      <table>
+        <thead><tr><th>Theme</th><th class="num">Opps</th><th class="num">Value at Risk (£)</th><th class="num">% of Open</th><th>Top accounts</th></tr></thead>
+        <tbody>
+          ${themeRows.length === 0 ? '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px">No themes detected in notes.</td></tr>' : themeRows.map(t => `
+            <tr>
+              <td class="bold">${escapeHtml(t.name)}</td>
+              <td class="num">${t.opps}</td>
+              <td class="num">${fmtGBP(t.value)}</td>
+              <td class="num">${totalOpenVal > 0 ? fmtPct(t.value/totalOpenVal) : '—'}</td>
+              <td style="font-size:11px">${escapeHtml(t.top3)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+
+      <div class="section-header">2. COMPETITORS NAMED IN RETENTION SPECIALIST NOTES</div>
+      <table>
+        <thead><tr><th>Competitor</th><th>Category</th><th class="num">Opps</th><th class="num">Value at Risk (£)</th><th>Accounts</th></tr></thead>
+        <tbody>
+          ${compRows.length === 0 ? '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px">No competitors named in notes this period.</td></tr>' : compRows.map(c => `
+            <tr>
+              <td class="bold">${escapeHtml(c.name)}</td>
+              <td><span class="badge">${escapeHtml(c.category)}</span></td>
+              <td class="num">${c.opps}</td>
+              <td class="num">${fmtGBP(c.value)}</td>
+              <td style="font-size:11px">${escapeHtml(c.accounts)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+
+      <div class="section-header">3. TOP 10 OPEN OPPORTUNITIES — FULL CUSTOMER STORY</div>
+      <table>
+        <thead><tr>
+          <th>Account</th><th class="num">DNR Risk (£)</th><th>Owner</th><th>Stage / Product</th>
+          <th>Description (verbatim)</th><th>Next Step (verbatim)</th>
+        </tr></thead>
+        <tbody>
+          ${openTop.length === 0 ? '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px">No open opportunities.</td></tr>' : openTop.map(r => `
+            <tr>
+              <td class="bold">${escapeHtml(r['Account Name']||'—')}</td>
+              <td class="num bold">${fmtGBP(r['DNR Risk'])}</td>
+              <td>${escapeHtml(r['Owner']||'—')}</td>
+              <td>${escapeHtml(r['Opp Stage Name']||'—')}<br><span style="color:var(--text-muted);font-size:10px">${escapeHtml(r['Product Family']||'—')}</span></td>
+              <td style="white-space:pre-line;font-size:11px;line-height:1.5;max-width:400px">${escapeHtml((r['Description']||'').toString().trim()||'(no narrative captured)')}</td>
+              <td style="white-space:pre-line;font-size:11px;line-height:1.5;max-width:280px">${escapeHtml((r['Next Step']||'').toString().trim()||'—')}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+
+      <div class="section-header">4. TOP 10 LOSSES — WHY THEY LEFT (FULL STORY)</div>
+      <table>
+        <thead><tr>
+          <th>Account</th><th class="num">Value Lost (£)</th><th>Owner</th><th>Cause / Reason</th>
+          <th>Description (verbatim)</th><th>Final outcome / next step</th>
+        </tr></thead>
+        <tbody>
+          ${lostTop.length === 0 ? '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px">No losses this week.</td></tr>' : lostTop.map(r => `
+            <tr>
+              <td class="bold">${escapeHtml(r['Account Name']||'—')}</td>
+              <td class="num lost">${fmtGBP(r['DNR Risk'])}</td>
+              <td>${escapeHtml(r['Owner']||'—')}</td>
+              <td>${escapeHtml(r['Case Reason']||r['Cause']||'—')}</td>
+              <td style="white-space:pre-line;font-size:11px;line-height:1.5;max-width:400px">${escapeHtml((r['Description']||'').toString().trim()||'(no narrative captured)')}</td>
+              <td style="white-space:pre-line;font-size:11px;line-height:1.5;max-width:280px">${escapeHtml((r['Next Step']||'').toString().trim()||'—')}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+
+      <div class="section-header">5. ALL SAVES THIS WEEK — HOW WE WON (FULL STORY)</div>
+      <table>
+        <thead><tr>
+          <th>Account</th><th class="num">Amount Saved (£)</th><th>Owner</th><th>Cause / Reason</th>
+          <th>Description (verbatim)</th><th>Final outcome / next step</th>
+        </tr></thead>
+        <tbody>
+          ${wonAll.length === 0 ? '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px">No wins this week.</td></tr>' : wonAll.map(r => `
+            <tr>
+              <td class="bold">${escapeHtml(r['Account Name']||'—')}</td>
+              <td class="num won">${fmtGBP(r['Amount Saved'])}</td>
+              <td>${escapeHtml(r['Owner']||'—')}</td>
+              <td>${escapeHtml(r['Case Reason']||r['Cause']||'—')}</td>
+              <td style="white-space:pre-line;font-size:11px;line-height:1.5;max-width:400px">${escapeHtml((r['Description']||'').toString().trim()||'(no narrative captured)')}</td>
+              <td style="white-space:pre-line;font-size:11px;line-height:1.5;max-width:280px">${escapeHtml((r['Next Step']||'').toString().trim()||'—')}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+  document.getElementById('pane-voice').innerHTML = html;
+}
+
+// ============================================================
+// 12-WEEK TREND
+// ============================================================
+function renderTrend() {
+  const team = CURRENT_TEAM === '__ALL__' ? 'All team leads' : CURRENT_TEAM;
+
+  if (!MOST_RECENT_WEEK_END) {
+    document.getElementById('pane-trend').innerHTML = `
+      <div class="sheet">
+        <div class="sheet-title">12-WEEK TREND</div>
+        <div class="callout">No dates detected in uploaded data — cannot render trend.</div>
+      </div>`;
+    return;
+  }
+
+  const weeks = [];
+  for (let i = 11; i >= 0; i--) {
+    const we = new Date(MOST_RECENT_WEEK_END); we.setDate(we.getDate() - i*7);
+    const ws = new Date(we); ws.setDate(we.getDate() - 6); ws.setHours(0,0,0,0);
+    weeks.push({ ws, we });
+  }
+
+  const trendData = weeks.map(({ws, we}) => {
+    const inb  = FILTERED.filter(r => { const d = parseDate(r['Opp Created Date']);  return d && d >= ws && d <= we; });
+    const won  = FILTERED.filter(r => { const d = parseDate(r['Opp Won Lost Date']); return d && d >= ws && d <= we && r['Opp Stage Name']==='Closed Won'; });
+    const lost = FILTERED.filter(r => { const d = parseDate(r['Opp Won Lost Date']); return d && d >= ws && d <= we && r['Opp Stage Name']==='Closed Lost'; });
+    const inbVal  = inb.reduce((s,r)=>s+(r['DNR Risk']||0),0);
+    const wonVal  = won.reduce((s,r)=>s+(r['Amount Saved']||0),0);
+    const lostVal = lost.reduce((s,r)=>s+(r['DNR Risk']||0),0);
+    return { ws, we, inbCount: inb.length, inbVal, wonCount: won.length, wonVal,
+      lostCount: lost.length, lostVal, wr: (wonVal+lostVal) > 0 ? wonVal/(wonVal+lostVal) : 0 };
+  });
+
+  const filledWeeks = trendData.filter(t => t.inbVal+t.wonVal+t.lostVal > 0).length;
+  const labels = trendData.map(t => `${t.ws.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}–${t.we.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}`);
+  const avgWr  = trendData.reduce((s,t) => s+t.wr, 0) / trendData.length;
+
+  let calloutClass = 'info', calloutMsg;
+  if (filledWeeks === 0)     { calloutClass=''; calloutMsg=`⚠ No activity detected in any of the last 12 weeks.`; }
+  else if (filledWeeks < 4)  { calloutClass=''; calloutMsg=`⚠ Only ${filledWeeks} of 12 weeks contain activity. Upload the full Power BI export for a fuller picture.`; }
+  else { calloutMsg = `📈 Showing 12 weeks ending ${MOST_RECENT_WEEK_END.toLocaleDateString('en-GB')}. L12W average win rate: ${fmtPct(avgWr)}.`; }
+
+  let html = `
+    <div class="sheet">
+      <div class="sheet-title">12-WEEK TREND — HOW THIS WEEK COMPARES</div>
+      <div class="sheet-subtitle">${escapeHtml(team)}  |  Rolling 12 weeks ending ${MOST_RECENT_WEEK_END.toLocaleDateString('en-GB')}</div>
+
+      <div class="callout ${calloutClass}">${escapeHtml(calloutMsg)}</div>
+
+      <div class="section-header">A. WEEKLY BREAKDOWN — INBOUND / WON / LOST</div>
+      <table>
+        <thead><tr>
+          <th>Week</th>
+          <th class="num">Inbound Opps</th><th class="num">Inbound Value (£)</th>
+          <th class="num">Won</th><th class="num">Won (£)</th>
+          <th class="num">Lost</th><th class="num">Lost (£)</th>
+          <th class="num">Win Rate (Value)</th>
+        </tr></thead>
+        <tbody>
+          ${trendData.map((t,i) => {
+            const isCurrent = i === trendData.length - 1;
+            return `<tr ${isCurrent ? 'class="total"' : ''}>
+              <td class="bold">${labels[i]}${isCurrent ? ' (current)' : ''}</td>
+              <td class="num">${t.inbCount}</td><td class="num">${fmtGBP(t.inbVal)}</td>
+              <td class="num">${t.wonCount}</td><td class="num won">${fmtGBP(t.wonVal)}</td>
+              <td class="num">${t.lostCount}</td><td class="num lost">${fmtGBP(t.lostVal)}</td>
+              <td class="num">${fmtPct(t.wr)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+
+      <div class="chart-block">
+        <h3>Weekly DNR activity</h3>
+        <div class="chart-wrap tall"><canvas id="chart-trend-bars"></canvas></div>
+      </div>
+      <div class="chart-block">
+        <h3>Weekly win rate</h3>
+        <div class="chart-wrap"><canvas id="chart-trend-line"></canvas></div>
+      </div>
+    </div>
+  `;
+  document.getElementById('pane-trend').innerHTML = html;
+
+  charts.bars = new Chart(document.getElementById('chart-trend-bars').getContext('2d'), {
+    type: 'bar',
+    data: { labels,
+      datasets: [
+        { label:'Inbound', data: trendData.map(t=>t.inbVal),  backgroundColor: ACCESS.teal,  borderRadius: 3 },
+        { label:'Won',     data: trendData.map(t=>t.wonVal),   backgroundColor: ACCESS.green, borderRadius: 3 },
+        { label:'Lost',    data: trendData.map(t=>t.lostVal),  backgroundColor: ACCESS.red,   borderRadius: 3 },
+      ] },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom' } },
+      scales:{ y:{ ticks:{ callback: v=>'£'+(v/1000).toFixed(0)+'K' } },
+        x:{ ticks:{ font:{size:9}, maxRotation:45, minRotation:45 } } } }
+  });
+
+  charts.line = new Chart(document.getElementById('chart-trend-line').getContext('2d'), {
+    type: 'line',
+    data: { labels,
+      datasets: [
+        { label:'Win rate',    data: trendData.map(t=>t.wr*100),    borderColor: ACCESS.plum, backgroundColor: ACCESS.plum, tension:0.25, fill:false, borderWidth:2.5, pointRadius:5, pointHoverRadius:7 },
+        { label:'L12W average', data: trendData.map(()=>avgWr*100), borderColor: ACCESS.teal, borderDash:[6,4], borderWidth:2, pointRadius:0, fill:false }
+      ] },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom' } },
+      scales:{ y:{ ticks:{ callback: v=>v.toFixed(0)+'%' } },
+        x:{ ticks:{ font:{size:9}, maxRotation:45, minRotation:45 } } } }
+  });
+}
+
+// ============================================================
+// AI EXECUTIVE SUMMARY
+// ============================================================
+
+// Convert basic markdown to safe HTML (escaping first, then converting syntax)
+function renderMarkdown(raw) {
+  let t = String(raw == null ? '' : raw)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  // Headers
+  t = t.replace(/^### (.+)$/gm, '<h4>$1</h4>');
+  t = t.replace(/^## (.+)$/gm,  '<h3>$1</h3>');
+  t = t.replace(/^# (.+)$/gm,   '<h3>$1</h3>');
+
+  // Bold / italic
+  t = t.replace(/\*\*(.+?)\*\*/g,  '<strong>$1</strong>');
+  t = t.replace(/\*(.+?)\*/g,      '<em>$1</em>');
+
+  // Bullet lists — group consecutive lines starting with "- " into <ul>
+  t = t.replace(/((?:^- .+\n?)+)/gm, match => {
+    const items = match.trim().split('\n').map(l => `<li>${l.replace(/^- /, '')}</li>`).join('');
+    return `<ul>${items}</ul>`;
+  });
+
+  // Numbered lists
+  t = t.replace(/((?:^\d+\. .+\n?)+)/gm, match => {
+    const items = match.trim().split('\n').map(l => `<li>${l.replace(/^\d+\. /, '')}</li>`).join('');
+    return `<ol>${items}</ol>`;
+  });
+
+  // Paragraphs: double newlines → paragraph breaks
+  t = t.replace(/\n\n+/g, '</p><p>');
+  // Single newlines → <br> inside paragraphs
+  t = t.replace(/\n/g, '<br>');
+
+  return '<p>' + t + '</p>';
+}
+
+function buildAIPrompt() {
+  const open        = getOpen();
+  const incThisWk   = FILTERED.filter(r => inWeek(r, 'Opp Created Date'));
+  const wonThisWk   = FILTERED.filter(r => r['Opp Stage Name']==='Closed Won'  && inWeek(r,'Opp Won Lost Date'));
+  const lostThisWk  = FILTERED.filter(r => r['Opp Stage Name']==='Closed Lost' && inWeek(r,'Opp Won Lost Date'));
+
+  const openVal  = open.reduce((s,r)       => s+(r['DNR Risk']||0), 0);
+  const incVal   = incThisWk.reduce((s,r)  => s+(r['DNR Risk']||0), 0);
+  const wonVal   = wonThisWk.reduce((s,r)  => s+(r['Amount Saved']||0), 0);
+  const lostVal  = lostThisWk.reduce((s,r) => s+(r['DNR Risk']||0), 0);
+  const wr       = (wonVal+lostVal) > 0 ? wonVal/(wonVal+lostVal) : 0;
+
+  const uncVal   = lostThisWk.filter(r => UNCONTROLLABLE.has((r['Cause']||'').trim())).reduce((s,r) => s+(r['DNR Risk']||0), 0);
+  const ctrlLost = lostVal - uncVal;
+  const ctrlWr   = (wonVal+ctrlLost) > 0 ? wonVal/(wonVal+ctrlLost) : 0;
+
+  // L12W average inbound
+  let l12wAvg = 0;
+  if (MOST_RECENT_WEEK_END) {
+    let totalInb = 0;
+    for (let i = 0; i < 12; i++) {
+      const we = new Date(MOST_RECENT_WEEK_END); we.setDate(we.getDate() - i*7);
+      const ws = new Date(we); ws.setDate(we.getDate() - 6); ws.setHours(0,0,0,0);
+      totalInb += FILTERED.filter(r => { const d=parseDate(r['Opp Created Date']); return d&&d>=ws&&d<=we; })
+        .reduce((s,r) => s+(r['DNR Risk']||0), 0);
+    }
+    l12wAvg = totalInb / 12;
+  }
+
+  const topLosses = [...lostThisWk].sort((a,b) => (b['DNR Risk']||0) - (a['DNR Risk']||0)).slice(0,5);
+  const topWins   = [...wonThisWk].sort((a,b)  => (b['Amount Saved']||0) - (a['Amount Saved']||0)).slice(0,5);
+  const topOpen   = [...open].sort((a,b)       => (b['DNR Risk']||0) - (a['DNR Risk']||0)).slice(0,10);
+
+  // Churn causes summary
+  const causes = {};
+  [...open, ...wonThisWk, ...lostThisWk].forEach(r => {
+    const c = (r['Cause'] || '(blank)').trim();
+    if (!causes[c]) causes[c] = { lostVal:0, wonVal:0 };
+    if (r['Opp Stage Name']==='Closed Lost')  causes[c].lostVal += (r['DNR Risk']||0);
+    else if (r['Opp Stage Name']==='Closed Won') causes[c].wonVal += (r['Amount Saved']||0);
+  });
+  const topCauses = Object.entries(causes).sort((a,b) => b[1].lostVal - a[1].lostVal).slice(0,6);
+
+  // Competitor mentions
+  const descs = FILTERED.map(r => r['Description'] || '');
+  const compMentions = [];
+  const seen = new Set();
+  for (const [comp, cat] of Object.entries(COMPETITORS)) {
+    const canon = comp.replace(/\s+/g,'');
+    if (seen.has(canon)) continue;
+    const re = new RegExp(`\\b${comp.replace(/\s+/g,'\\s*')}\\b`, 'i');
+    const matched = FILTERED.filter((r,i) => re.test(descs[i]));
+    if (!matched.length) continue;
+    seen.add(canon);
+    const val = matched.reduce((s,r)=>s+(r['DNR Risk']||0),0);
+    compMentions.push(`${comp} (${cat}, ${matched.length} opps, £${Math.round(val).toLocaleString()} at risk)`);
+  }
+
+  const team   = CURRENT_TEAM === '__ALL__' ? 'All team leads combined' : CURRENT_TEAM;
+  const period = weekLabel();
+
+  return `You are a senior retention analytics lead at a hospitality technology company. Based on the weekly GRR (Gross Revenue Retention) pipeline data below, write a concise executive summary for a leadership audience.
+
+Structure your response as follows:
+## Headline Verdict
+One paragraph (2–3 sentences) — was this a good or bad week overall, by value, trend context, and win rate.
+
+## What Happened This Week
+2–4 bullets covering the most important wins, losses, and pipeline movements. Name specific accounts and £ values.
+
+## Pipeline Risk Watch
+1–2 paragraphs on the open pipeline — biggest exposures, any urgent cancellation dates, top churn themes driving risk.
+
+## Competitor & Churn Intelligence
+Brief paragraph on the dominant churn cause(s) this week and any named competitors appearing in notes.
+
+## Recommendations
+3 clear, actionable bullets for the team and leadership — prioritised by urgency.
+
+Write in confident, direct plain English. Use the specific account names and £ values from the data. No waffle — every sentence should inform a decision. Keep it under 450 words.
+
+---
+TEAM: ${team}
+PERIOD: ${period}
+
+PIPELINE METRICS:
+- Open pipeline total: £${Math.round(openVal).toLocaleString()} (${open.length} opps)
+- Inbound this week (new at-risk): ${incThisWk.length} opps, £${Math.round(incVal).toLocaleString()}
+- L12W average inbound: £${Math.round(l12wAvg).toLocaleString()} (delta: ${incVal >= l12wAvg ? '+' : ''}£${Math.round(incVal - l12wAvg).toLocaleString()})
+- Closed Won this week: ${wonThisWk.length} saves, £${Math.round(wonVal).toLocaleString()} saved
+- Closed Lost this week: ${lostThisWk.length} losses, £${Math.round(lostVal).toLocaleString()} lost
+- Headline win rate (by value): ${(wr*100).toFixed(1)}%
+- Controllable win rate (excluding uncontrollable causes): ${(ctrlWr*100).toFixed(1)}%
+- Uncontrollable losses: £${Math.round(uncVal).toLocaleString()}
+
+TOP LOSSES THIS WEEK (by value):
+${topLosses.length ? topLosses.map(r=>`- ${r['Account Name']||'?'} | £${Math.round(r['DNR Risk']||0).toLocaleString()} | Cause: ${r['Cause']||'?'} | Product: ${r['Product Family']||'?'} | Notes: ${(r['Description']||'').slice(0,180)}`).join('\n') : '(none)'}
+
+TOP WINS THIS WEEK (by value saved):
+${topWins.length ? topWins.map(r=>`- ${r['Account Name']||'?'} | £${Math.round(r['Amount Saved']||0).toLocaleString()} saved | Cause: ${r['Cause']||'?'} | Notes: ${(r['Description']||'').slice(0,180)}`).join('\n') : '(none)'}
+
+TOP 10 OPEN OPPORTUNITIES AT RISK:
+${topOpen.length ? topOpen.map(r=>`- ${r['Account Name']||'?'} | £${Math.round(r['DNR Risk']||0).toLocaleString()} | Stage: ${r['Opp Stage Name']||'?'} | Cause: ${r['Cause']||'?'} | Cancel date: ${formatDate(r['Cancel Effective Date'])}`).join('\n') : '(none)'}
+
+CHURN CAUSES (this period, top 6 by value lost):
+${topCauses.length ? topCauses.map(([c,v])=>`- ${c}: £${Math.round(v.lostVal).toLocaleString()} lost / £${Math.round(v.wonVal).toLocaleString()} saved`).join('\n') : '(none)'}
+
+COMPETITORS MENTIONED IN NOTES:
+${compMentions.length ? compMentions.join(', ') : '(none detected)'}`;
+}
+
+function renderAI() {
+  const hasKey = !!getApiKey();
+  const model  = getModel();
+  const modelLabel = model.includes('haiku') ? 'Claude Haiku 4.5 (fast)' : 'Claude Sonnet 4.6 (quality)';
+
+  if (!hasKey) {
+    document.getElementById('pane-ai').innerHTML = `
+      <div class="ai-section">
+        <div class="sheet-title">AI EXECUTIVE SUMMARY</div>
+        <div class="sheet-subtitle">Claude AI · Plain-English analysis of your retention data</div>
+        <div class="ai-setup-box">
+          <h2>🤖 AI Executive Summary</h2>
+          <p>This tab uses Claude AI to write a plain-English executive summary of your week's GRR data — headline verdict, what happened, pipeline risks, churn themes, and actionable recommendations.</p>
+          <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-text">Get a free API key at <strong>console.anthropic.com</strong> (starts at $5 credit)</div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-text">Click <strong>⚙ AI Settings</strong> in the top-right and paste your key</div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-text">Come back here and click <strong>Generate</strong> — the summary streams in real time</div>
+          </div>
+          <button class="generate-btn" style="margin-top:8px" onclick="openSettingsModal()">🔑 Set API Key</button>
+          <p style="font-size:11px;color:var(--text-muted);margin-top:16px">Your key is stored only in this browser. It is sent directly to Anthropic's API and never stored or logged anywhere else.</p>
+        </div>
+      </div>`;
+    return;
+  }
+
+  document.getElementById('pane-ai').innerHTML = `
+    <div class="ai-section">
+      <div class="sheet-title">AI EXECUTIVE SUMMARY</div>
+      <div class="sheet-subtitle">Claude AI · ${escapeHtml(modelLabel)} · ${escapeHtml(CURRENT_TEAM === '__ALL__' ? 'All team leads' : CURRENT_TEAM)} | ${escapeHtml(weekLabel())}</div>
+      <button class="generate-btn" id="ai-gen-btn" onclick="generateAISummary()">✨ Generate AI Executive Summary</button>
+      <span class="ai-meta">Model: ${escapeHtml(modelLabel)} · <a onclick="openSettingsModal()">change settings</a></span>
+      <div id="ai-output"></div>
+      <div class="callout" style="margin-top:20px">⚠ AI-generated narrative from uploaded data only. Verify figures against source before sharing with leadership.</div>
+    </div>`;
+}
+
+async function generateAISummary() {
+  const key = getApiKey();
+  if (!key) { openSettingsModal(); return; }
+
+  const btn    = document.getElementById('ai-gen-btn');
+  const output = document.getElementById('ai-output');
+  if (!btn || !output) return;
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Generating…';
+  output.innerHTML = `<div class="ai-content" id="ai-stream"><span class="cursor-blink"></span></div>`;
+
+  const streamEl = document.getElementById('ai-stream');
+  let fullText = '';
+
+  const prompt = buildAIPrompt();
+  const model  = getModel();
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 1200,
+        stream: true,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: { message: `HTTP ${response.status}` } }));
+      throw new Error(err.error?.message || `API error ${response.status}`);
+    }
+
+    const reader  = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6).trim();
+        if (raw === '[DONE]' || !raw) continue;
+        try {
+          const evt = JSON.parse(raw);
+          if (evt.type === 'content_block_delta' && evt.delta?.text) {
+            fullText += evt.delta.text;
+            streamEl.innerHTML = renderMarkdown(fullText) + '<span class="cursor-blink"></span>';
+            streamEl.scrollIntoView({ block: 'nearest' });
+          }
+        } catch (_) { /* skip malformed SSE lines */ }
+      }
+    }
+
+    // Final render without blinking cursor
+    streamEl.innerHTML = renderMarkdown(fullText);
+    btn.disabled = false;
+    btn.textContent = '↻ Regenerate';
+
+  } catch (err) {
+    streamEl.innerHTML = `
+      <div class="callout" style="margin:0">
+        ❌ <strong>Error:</strong> ${escapeHtml(err.message)}<br>
+        <span style="font-size:11px;margin-top:6px;display:block">
+          Check your API key in ⚙ AI Settings, or open the browser console for details.
+        </span>
+      </div>`;
+    btn.disabled = false;
+    btn.textContent = '↻ Try Again';
+  }
+}
+
+// ============================================================
+// EVENT WIRING
+// ============================================================
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.pane').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('pane-' + t.dataset.pane).classList.add('active');
+  });
+});
+document.getElementById('team-filter').addEventListener('change', applyFilter);
+
+const input = document.getElementById('file-input'), zone = document.getElementById('upload-zone');
+input.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+zone.addEventListener('click',    () => input.click());
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragging'); });
+zone.addEventListener('dragleave',  () => zone.classList.remove('dragging'));
+zone.addEventListener('drop', e => {
+  e.preventDefault(); zone.classList.remove('dragging');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+// Close modal on overlay click
+document.getElementById('settings-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('settings-modal')) closeSettingsModal();
+});
+</script>
+</body>
+</html>
