@@ -123,6 +123,20 @@ td.won { color: var(--green); font-weight: 600; }
 .banner.success { background: var(--green); color: white; box-shadow: 0 4px 12px rgba(0,176,80,0.3); }
 .banner.error { background: var(--red); color: white; box-shadow: 0 4px 12px rgba(240,24,63,0.3); }
 
+/* ── EXECUTIVE KPI CARDS ── */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin: 18px 0 4px; }
+.kpi-card { background: white; border: 1px solid var(--border); border-top: 4px solid var(--teal); border-radius: 8px; padding: 16px 18px; box-shadow: 0 1px 3px rgba(75,17,44,0.05); }
+.kpi-card.plum  { border-top-color: var(--plum); }
+.kpi-card.green { border-top-color: var(--green); }
+.kpi-card.red   { border-top-color: var(--red); }
+.kpi-card .kpi-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+.kpi-card .kpi-value { font-size: 26px; font-weight: 700; color: var(--plum); margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
+.kpi-card .kpi-value.green { color: var(--green); }
+.kpi-card .kpi-value.red   { color: var(--red); }
+.kpi-card .kpi-sub { font-size: 11px; color: var(--text-muted); }
+.kpi-card .kpi-sub .up   { color: var(--red);   font-weight: 700; }
+.kpi-card .kpi-sub .down { color: var(--green); font-weight: 700; }
+
 /* ── AI SUMMARY STYLES ── */
 .ai-section { padding: 24px; }
 .ai-section .sheet-title { background: linear-gradient(135deg, #4B112C, #7B2E8A); }
@@ -212,6 +226,29 @@ td.won { color: var(--green); font-weight: 600; }
 .key-status { font-size: 11px; margin-bottom: 18px; }
 .key-status.saved { color: var(--green); }
 .key-status.missing { color: var(--red); }
+
+/* ── AI ACTION BUTTONS (copy / download) ── */
+.ai-actions { display: none; gap: 8px; margin: 14px 0 4px; }
+.ai-actions.show { display: flex; }
+.ai-action-btn { background: white; color: var(--plum); border: 1px solid var(--border); padding: 7px 14px; border-radius: 6px; font-family: inherit; font-weight: 600; font-size: 12px; cursor: pointer; }
+.ai-action-btn:hover { background: var(--teal-light); }
+
+/* ── PRINT / SAVE AS PDF ── */
+@media print {
+  body { background: white; font-size: 11px; }
+  .topbar, .tabstrip, .upload-zone, .status-bar, .settings-btn, .upload-btn,
+  .team-select, .modal-overlay, .generate-btn, .ai-actions, .ai-meta,
+  #empty-state { display: none !important; }
+  .shell { max-width: none; }
+  /* Print every loaded pane, not just the active one */
+  .pane { display: block !important; page-break-after: always; }
+  .pane:empty { display: none !important; }
+  .scrollable { max-height: none !important; overflow: visible !important; border: none; }
+  .chart-block, .callout { page-break-inside: avoid; }
+  .sheet-title, .section-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  table thead th, .sheet-title, .sheet-subtitle, .section-header, .product-banner,
+  .kpi-card { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
 </style>
 </head>
 <body>
@@ -224,6 +261,7 @@ td.won { color: var(--green); font-weight: 600; }
   </div>
   <div class="actions">
     <select class="team-select" id="team-filter" style="display:none"></select>
+    <button class="settings-btn" id="print-btn" style="display:none" onclick="window.print()">🖨 Print / PDF</button>
     <button class="settings-btn" onclick="openSettingsModal()">⚙ AI Settings</button>
     <button class="upload-btn" onclick="document.getElementById('file-input').click()">↻ Upload Power BI export</button>
     <input type="file" id="file-input" accept=".xlsx,.xls,.csv" />
@@ -368,6 +406,35 @@ const COMPETITORS = {
   'Deputy': 'Workforce', 'Quinyx': 'Workforce', 'Planday': 'Workforce', 'Bizimply': 'Workforce', '7shifts': 'Workforce', 'Harri': 'Workforce',
 };
 
+// Brand names that are also common English words — require a competitive-context
+// cue nearby to avoid false positives (e.g. "Times Square", "fourth quarter").
+const AMBIGUOUS_COMPETITORS = new Set(['NCR', 'Square', 'Toast', 'Revel', 'Fourth', 'Harri', 'Deputy']);
+const COMP_CUE = /(competitor|moving to|switching to|migrat|signed with|going with|quoted|cheaper|alternative|demo|trial|chose|choosing|replac|tender|\brfp\b|proposal|switch)/i;
+
+// Single source of truth for competitor mining (used by Churn, Voice & AI tabs).
+function findCompetitorMentions(rows) {
+  const out = [], seen = new Set();
+  for (const [comp, cat] of Object.entries(COMPETITORS)) {
+    const canon = comp.replace(/\s+/g, '');
+    if (seen.has(canon)) continue;
+    const re = new RegExp(`\\b${comp.replace(/\s+/g, '\\s*')}\\b`, 'i');
+    const ambiguous = AMBIGUOUS_COMPETITORS.has(comp);
+    const matched = rows.filter(r => {
+      const d = r['Description'] || '';
+      if (!re.test(d)) return false;
+      return ambiguous ? COMP_CUE.test(d) : true;
+    });
+    if (!matched.length) continue;
+    seen.add(canon);
+    out.push({
+      name: comp, category: cat, opps: matched.length,
+      value: matched.reduce((s, r) => s + (r['DNR Risk'] || 0), 0),
+      matched,
+    });
+  }
+  return out.sort((a, b) => b.value - a.value);
+}
+
 // ============================================================
 // SETTINGS — API KEY & MODEL
 // ============================================================
@@ -467,6 +534,7 @@ function onDataLoaded(fileName) {
   document.getElementById('meta-info').innerHTML = `<strong>${RAW_DATA.length}</strong> opps · ${causes.length} team lead${causes.length===1?'':'s'}`;
   document.getElementById('empty-state').style.display = 'none';
   document.getElementById('tabstrip').style.display = 'flex';
+  document.getElementById('print-btn').style.display = 'inline-block';
   document.getElementById('upload-zone').style.display = 'none';
   document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
   document.getElementById('pane-summary').classList.add('active');
@@ -626,10 +694,44 @@ function renderSummary() {
     commentary += `${wonThisWk.length} win${wonThisWk.length===1?'':'s'} saved ${fmtGBP(wonVal)}.`;
   }
 
+  const hasActivity = (wonVal + lostVal) > 0;
+  const wrDisplay = hasActivity ? fmtPct(wr) : 'n/a';
+  const deltaUp = delta > 0;
+  const deltaPct = l12wAvg > 0 ? Math.abs(delta / l12wAvg) * 100 : null;
+
   let html = `
     <div class="sheet">
       <div class="sheet-title">GRR RETENTION — WEEKLY PIPELINE SUMMARY</div>
       <div class="sheet-subtitle">${escapeHtml(team)}  |  ${escapeHtml(period)}</div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card plum">
+          <div class="kpi-label">Open Pipeline at Risk</div>
+          <div class="kpi-value">${fmtGBP(openVal)}</div>
+          <div class="kpi-sub">${open.length} open opportunit${open.length===1?'y':'ies'}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Inbound This Week</div>
+          <div class="kpi-value">${fmtGBP(incVal)}</div>
+          <div class="kpi-sub">${incThisWk.length} new · vs L12W avg
+            <span class="${deltaUp?'up':'down'}">${deltaUp?'▲':'▼'} ${deltaPct!=null?deltaPct.toFixed(0)+'%':fmtGBP(Math.abs(delta))}</span></div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Saved This Week</div>
+          <div class="kpi-value green">${fmtGBP(wonVal)}</div>
+          <div class="kpi-sub">${wonThisWk.length} win${wonThisWk.length===1?'':'s'}</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">Lost This Week</div>
+          <div class="kpi-value red">${fmtGBP(lostVal)}</div>
+          <div class="kpi-sub">${lostThisWk.length} loss${lostThisWk.length===1?'':'es'}</div>
+        </div>
+        <div class="kpi-card ${hasActivity ? (wr>=0.5?'green':'red') : ''}">
+          <div class="kpi-label">Win Rate (by value)</div>
+          <div class="kpi-value ${hasActivity ? (wr>=0.5?'green':'red') : ''}">${wrDisplay}</div>
+          <div class="kpi-sub">${uncCount>0?`controllable: ${fmtPct(ctrlWr)}`:'no uncontrollable losses'}</div>
+        </div>
+      </div>
 
       <div class="section-header">INBOUND DNR — ${escapeHtml(period.toUpperCase())}</div>
       <table>
@@ -649,7 +751,7 @@ function renderSummary() {
           <tr><td>Inbound (new at-risk opps)</td><td class="num">${incThisWk.length}</td><td class="num">${fmtGBP(incVal)}</td></tr>
           <tr><td>Closed Won (saved)</td><td class="num">${wonThisWk.length}</td><td class="num won">${fmtGBP(wonVal)}</td></tr>
           <tr><td>Closed Lost</td><td class="num">${lostThisWk.length}</td><td class="num lost">${fmtGBP(lostVal)}</td></tr>
-          <tr class="total"><td class="bold">Win Rate (by value)</td><td class="num">—</td><td class="num">${fmtPct(wr)}</td></tr>
+          <tr class="total"><td class="bold">Win Rate (by value)</td><td class="num">—</td><td class="num">${wrDisplay}</td></tr>
         </tbody>
       </table>
 
@@ -735,21 +837,9 @@ function renderChurn() {
   });
   const causeRows = Object.entries(causes).sort((a,b) => b[1].lostVal - a[1].lostVal);
 
-  const descs = FILTERED.map(r => r['Description'] || '');
-  const compRows = [];
-  const seen = new Set();
-  for (const [comp, cat] of Object.entries(COMPETITORS)) {
-    const canon = comp.replace(/\s+/g,'');
-    if (seen.has(canon)) continue;
-    const re = new RegExp(`\\b${comp.replace(/\s+/g,'\\s*')}\\b`, 'i');
-    const matched = FILTERED.filter((r,i) => re.test(descs[i]));
-    if (!matched.length) continue;
-    seen.add(canon);
-    compRows.push({ name: comp, category: cat, opps: matched.length,
-      value: matched.reduce((s,r) => s+(r['DNR Risk']||0), 0),
-      accounts: matched.slice(0,5).map(r => r['Account Name']).join('; ') });
-  }
-  compRows.sort((a,b) => b.value - a.value);
+  const compRows = findCompetitorMentions(FILTERED).map(c => ({
+    ...c, accounts: c.matched.slice(0,5).map(r => r['Account Name']).join('; ')
+  }));
 
   const team = CURRENT_TEAM === '__ALL__' ? 'All team leads' : CURRENT_TEAM;
   let html = `
@@ -912,20 +1002,9 @@ function renderVoice() {
     };
   }).filter(t => t.opps > 0).sort((a,b) => b.value - a.value);
 
-  const compRows = [];
-  const seen = new Set();
-  for (const [comp, cat] of Object.entries(COMPETITORS)) {
-    const canon = comp.replace(/\s+/g,'');
-    if (seen.has(canon)) continue;
-    const re = new RegExp(`\\b${comp.replace(/\s+/g,'\\s*')}\\b`, 'i');
-    const matched = FILTERED.filter((r,i) => re.test(descs[i]));
-    if (!matched.length) continue;
-    seen.add(canon);
-    compRows.push({ name: comp, category: cat, opps: matched.length,
-      value: matched.reduce((s,r) => s+(r['DNR Risk']||0), 0),
-      accounts: matched.map(r => `${r['Account Name']} (${fmtGBP(r['DNR Risk'])})`).join('; ') });
-  }
-  compRows.sort((a,b) => b.value - a.value);
+  const compRows = findCompetitorMentions(FILTERED).map(c => ({
+    ...c, accounts: c.matched.map(r => `${r['Account Name']} (${fmtGBP(r['DNR Risk'])})`).join('; ')
+  }));
 
   const openTop  = getOpen().sort((a,b) => (b['DNR Risk']||0) - (a['DNR Risk']||0)).slice(0,10);
   const lostTop  = FILTERED.filter(r => r['Opp Stage Name']==='Closed Lost' && inWeek(r,'Opp Won Lost Date'))
@@ -1227,19 +1306,8 @@ function buildAIPrompt() {
   const topCauses = Object.entries(causes).sort((a,b) => b[1].lostVal - a[1].lostVal).slice(0,6);
 
   // Competitor mentions
-  const descs = FILTERED.map(r => r['Description'] || '');
-  const compMentions = [];
-  const seen = new Set();
-  for (const [comp, cat] of Object.entries(COMPETITORS)) {
-    const canon = comp.replace(/\s+/g,'');
-    if (seen.has(canon)) continue;
-    const re = new RegExp(`\\b${comp.replace(/\s+/g,'\\s*')}\\b`, 'i');
-    const matched = FILTERED.filter((r,i) => re.test(descs[i]));
-    if (!matched.length) continue;
-    seen.add(canon);
-    const val = matched.reduce((s,r)=>s+(r['DNR Risk']||0),0);
-    compMentions.push(`${comp} (${cat}, ${matched.length} opps, £${Math.round(val).toLocaleString()} at risk)`);
-  }
+  const compMentions = findCompetitorMentions(FILTERED).map(c =>
+    `${c.name} (${c.category}, ${c.opps} opps, £${Math.round(c.value).toLocaleString()} at risk)`);
 
   const team   = CURRENT_TEAM === '__ALL__' ? 'All team leads combined' : CURRENT_TEAM;
   const period = weekLabel();
@@ -1332,14 +1400,42 @@ function renderAI() {
       <div class="sheet-subtitle">Claude AI · ${escapeHtml(modelLabel)} · ${escapeHtml(CURRENT_TEAM === '__ALL__' ? 'All team leads' : CURRENT_TEAM)} | ${escapeHtml(weekLabel())}</div>
       <button class="generate-btn" id="ai-gen-btn" onclick="generateAISummary()">✨ Generate AI Executive Summary</button>
       <span class="ai-meta">Model: ${escapeHtml(modelLabel)} · <a onclick="openSettingsModal()">change settings</a></span>
+      <div class="ai-actions" id="ai-actions">
+        <button class="ai-action-btn" onclick="copyAISummary()">📋 Copy</button>
+        <button class="ai-action-btn" onclick="downloadAISummary()">⬇ Download .md</button>
+      </div>
       <div id="ai-output"></div>
       <div class="callout" style="margin-top:20px">⚠ AI-generated narrative from uploaded data only. Verify figures against source before sharing with leadership.</div>
     </div>`;
 }
 
+let LAST_AI_SUMMARY = '';
+
+function aiSummaryHeader() {
+  const team = CURRENT_TEAM === '__ALL__' ? 'All team leads' : CURRENT_TEAM;
+  return `GRR Retention — AI Executive Summary\nTeam: ${team}\nPeriod: ${weekLabel()}\nGenerated: ${new Date().toLocaleString('en-GB')}\n\n`;
+}
+function copyAISummary() {
+  if (!LAST_AI_SUMMARY) return;
+  navigator.clipboard.writeText(aiSummaryHeader() + LAST_AI_SUMMARY)
+    .then(() => showBanner('Summary copied to clipboard'))
+    .catch(() => showBanner('Could not copy', 'error'));
+}
+function downloadAISummary() {
+  if (!LAST_AI_SUMMARY) return;
+  const blob = new Blob([aiSummaryHeader() + LAST_AI_SUMMARY], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0,10);
+  a.href = url; a.download = `GRR_Exec_Summary_${stamp}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 async function generateAISummary() {
   const key = getApiKey();
   if (!key) { openSettingsModal(); return; }
+  document.getElementById('ai-actions')?.classList.remove('show');
 
   const btn    = document.getElementById('ai-gen-btn');
   const output = document.getElementById('ai-output');
@@ -1406,6 +1502,8 @@ async function generateAISummary() {
 
     // Final render without blinking cursor
     streamEl.innerHTML = renderMarkdown(fullText);
+    LAST_AI_SUMMARY = fullText;
+    document.getElementById('ai-actions')?.classList.add('show');
     btn.disabled = false;
     btn.textContent = '↻ Regenerate';
 
