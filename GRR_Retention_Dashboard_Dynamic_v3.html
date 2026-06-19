@@ -162,6 +162,29 @@ td.won { color: var(--green); font-weight: 600; }
 .ai-action-btn { background: white; color: var(--plum); border: 1px solid var(--border); padding: 7px 14px; border-radius: 6px; font-family: inherit; font-weight: 600; font-size: 12px; cursor: pointer; }
 .ai-action-btn:hover { background: var(--teal-light); }
 
+/* ── EXECUTIVE EMAIL PREVIEW ── */
+.email-section { padding: 24px; }
+.email-preview-wrap { background: white; border: 1px solid var(--border); border-radius: 8px; max-width: 740px; margin: 20px auto; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+.email-meta { background: #F8F7F4; border-bottom: 1px solid var(--border); padding: 14px 22px; border-radius: 8px 8px 0 0; }
+.email-meta-row { display: flex; gap: 8px; align-items: baseline; margin: 4px 0; font-size: 12px; }
+.email-meta-row .lbl { font-weight: 700; color: var(--text-muted); min-width: 58px; }
+.email-meta-row .val { color: var(--text); }
+.email-meta-row.subj .val { font-weight: 700; font-size: 13px; color: var(--plum); }
+.email-body-content { padding: 24px 28px 28px; font-size: 13px; line-height: 1.75; color: var(--text); }
+.email-body-content p { margin: 10px 0; }
+.email-stats-tbl { width: 100%; border-collapse: collapse; margin: 10px 0 18px; font-size: 12.5px; }
+.email-stats-tbl th { background: var(--plum); color: white; padding: 8px 12px; font-size: 11px; font-weight: 700; letter-spacing: 0.3px; }
+.email-stats-tbl th:not(:first-child) { text-align: right; }
+.email-stats-tbl td { padding: 7px 12px; border-bottom: 1px solid var(--border); }
+.email-stats-tbl td:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.email-stats-tbl tr:nth-child(even) { background: var(--bg); }
+.email-stats-tbl tr.wr td { font-weight: 700; background: var(--teal-light); }
+.email-sh { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin: 20px 0 6px; }
+.email-urgent { padding: 7px 12px; background: #FEF2F2; border-left: 3px solid var(--red); margin: 4px 0; font-size: 12px; border-radius: 0 4px 4px 0; color: var(--text); }
+.email-comp  { padding: 7px 12px; background: var(--amber-bg); border-left: 3px solid var(--teal); margin: 4px 0; font-size: 12px; border-radius: 0 4px 4px 0; color: var(--amber-text); }
+.email-sig { margin-top: 24px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+.email-divider { border: none; border-top: 1px solid var(--border); margin: 4px 0 12px; }
+
 /* ── PRINT / SAVE AS PDF ── */
 @media print {
   body { background: white; font-size: 11px; }
@@ -219,6 +242,7 @@ td.won { color: var(--green); font-weight: 600; }
   <div class="tab" data-pane="voice">🗣️ Customer Voice</div>
   <div class="tab" data-pane="trend">📈 12-Week Trend</div>
   <div class="tab ai-tab" data-pane="ai">🧠 Executive Summary</div>
+  <div class="tab" data-pane="email">📧 Executive Email</div>
 </div>
 
 <div id="empty-state" class="empty">
@@ -238,6 +262,7 @@ td.won { color: var(--green); font-weight: 600; }
 <div class="pane" id="pane-voice"></div>
 <div class="pane" id="pane-trend"></div>
 <div class="pane" id="pane-ai"></div>
+<div class="pane" id="pane-email"></div>
 
 </div>
 
@@ -455,6 +480,7 @@ function render() {
   renderVoice();
   renderTrend();
   renderExec();
+  renderEmail();
 }
 
 // Reusable: render an entire tab as title + subtitle + data table
@@ -1330,6 +1356,220 @@ function downloadSummary() {
   a.href = url; a.download = `GRR_Exec_Summary_${new Date().toISOString().slice(0,10)}.txt`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// ============================================================
+// EXECUTIVE EMAIL
+// ============================================================
+let LAST_EMAIL_TEXT = '';
+
+function getMtdRange() {
+  if (!MOST_RECENT_WEEK_END) return null;
+  const start = new Date(MOST_RECENT_WEEK_END);
+  start.setDate(1); start.setHours(0,0,0,0);
+  return { start, end: MOST_RECENT_WEEK_END };
+}
+
+function inMtd(r, field) {
+  const m = getMtdRange(); if (!m) return false;
+  const d = parseDate(r[field]); return d && d >= m.start && d <= m.end;
+}
+
+function renderEmail() {
+  const team  = CURRENT_TEAM === '__ALL__' ? 'All team leads' : CURRENT_TEAM;
+  const wkEnd = MOST_RECENT_WEEK_END
+    ? MOST_RECENT_WEEK_END.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })
+    : 'this week';
+  const mtdRange = getMtdRange();
+  const monthName = mtdRange
+    ? mtdRange.start.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+    : '';
+
+  // ── Week figures ──
+  const incWk   = FILTERED.filter(r => inWeek(r, 'Opp Created Date'));
+  const wonWk   = FILTERED.filter(r => r['Opp Stage Name']==='Closed Won'  && inWeek(r,'Opp Won Lost Date'));
+  const lostWk  = FILTERED.filter(r => r['Opp Stage Name']==='Closed Lost' && inWeek(r,'Opp Won Lost Date'));
+  const incValWk  = incWk.reduce((s,r)  => s+(r['DNR Risk']||0), 0);
+  const wonValWk  = wonWk.reduce((s,r)  => s+(r['Amount Saved']||0), 0);
+  const lostValWk = lostWk.reduce((s,r) => s+(r['DNR Risk']||0), 0);
+  const wrWk = (wonValWk+lostValWk)>0 ? wonValWk/(wonValWk+lostValWk) : null;
+
+  // ── Month-to-date figures ──
+  const incMtd   = FILTERED.filter(r => inMtd(r,'Opp Created Date'));
+  const wonMtd   = FILTERED.filter(r => r['Opp Stage Name']==='Closed Won'  && inMtd(r,'Opp Won Lost Date'));
+  const lostMtd  = FILTERED.filter(r => r['Opp Stage Name']==='Closed Lost' && inMtd(r,'Opp Won Lost Date'));
+  const incValMtd  = incMtd.reduce((s,r)  => s+(r['DNR Risk']||0), 0);
+  const wonValMtd  = wonMtd.reduce((s,r)  => s+(r['Amount Saved']||0), 0);
+  const lostValMtd = lostMtd.reduce((s,r) => s+(r['DNR Risk']||0), 0);
+  const wrMtd = (wonValMtd+lostValMtd)>0 ? wonValMtd/(wonValMtd+lostValMtd) : null;
+
+  // ── Open pipeline & urgency ──
+  const open    = getOpen();
+  const openVal = open.reduce((s,r) => s+(r['DNR Risk']||0), 0);
+  const ref = MOST_RECENT_WEEK_END || new Date();
+  const horizon = new Date(ref); horizon.setDate(horizon.getDate()+30);
+  const urgent  = open.filter(r => { const d=parseDate(r['Cancel Effective Date']); return d&&d>=ref&&d<=horizon; })
+    .sort((a,b) => parseDate(a['Cancel Effective Date'])-parseDate(b['Cancel Effective Date']));
+  const urgentVal = urgent.reduce((s,r) => s+(r['DNR Risk']||0), 0);
+
+  // ── Top competitor ──
+  const comps = findCompetitorMentions(FILTERED);
+
+  // ── Opening line ──
+  let opener = '';
+  if (wrWk !== null) {
+    if (wrWk >= 0.6)  opener = `Strong week — we defended well.`;
+    else if (wrWk >= 0.4) opener = `Mixed week — solid saves alongside some losses.`;
+    else              opener = `Challenging week — losses outweighed saves by value.`;
+  } else {
+    opener = `Quiet week — no opportunities closed in the period.`;
+  }
+
+  // ══════════ HTML preview ══════════
+  const wrWkCell  = wrWk  !== null ? `<span style="color:${wrWk>=0.5?'#16A34A':'#E11D48'}">${fmtPct(wrWk)}</span>`  : '<span style="color:#6B7280">n/a</span>';
+  const wrMtdCell = wrMtd !== null ? `<span style="color:${wrMtd>=0.5?'#16A34A':'#E11D48'}">${fmtPct(wrMtd)}</span>` : '<span style="color:#6B7280">n/a</span>';
+
+  const statsRows = [
+    ['📥 Incoming at-risk',
+      `${incWk.length} opp${incWk.length===1?'':'s'} · ${fmtGBP(incValWk)}`,
+      `${incMtd.length} opp${incMtd.length===1?'':'s'} · ${fmtGBP(incValMtd)}`],
+    ['✅ Saved',
+      `${wonWk.length} acct${wonWk.length===1?'':'s'} · <span style="color:#16A34A;font-weight:700">${fmtGBP(wonValWk)}</span>`,
+      `${wonMtd.length} acct${wonMtd.length===1?'':'s'} · <span style="color:#16A34A;font-weight:700">${fmtGBP(wonValMtd)}</span>`],
+    ['❌ Lost',
+      `${lostWk.length} acct${lostWk.length===1?'':'s'} · <span style="color:#E11D48;font-weight:700">${fmtGBP(lostValWk)}</span>`,
+      `${lostMtd.length} acct${lostMtd.length===1?'':'s'} · <span style="color:#E11D48;font-weight:700">${fmtGBP(lostValMtd)}</span>`],
+  ];
+
+  const subject = `GRR Retention Update — w/e ${wkEnd}${CURRENT_TEAM!=='__ALL__' ? ' · '+CURRENT_TEAM : ''}`;
+
+  let html = `
+    <div class="email-section">
+      <div class="sheet-title">EXECUTIVE EMAIL DRAFT</div>
+      <div class="sheet-subtitle">${escapeHtml(team)}  |  ${escapeHtml(weekLabel())}  ·  Ready to copy &amp; send</div>
+
+      <div class="ai-actions show" style="margin:16px 0 4px">
+        <button class="ai-action-btn" onclick="copyEmail()">📋 Copy email text</button>
+        <button class="ai-action-btn" onclick="downloadEmail()">⬇ Download .txt</button>
+      </div>
+
+      <div class="email-preview-wrap">
+        <div class="email-meta">
+          <div class="email-meta-row"><span class="lbl">To:</span><span class="val">[Leadership team]</span></div>
+          <div class="email-meta-row"><span class="lbl">CC:</span><span class="val">[Your manager / FBP]</span></div>
+          <div class="email-meta-row subj"><span class="lbl">Subject:</span><span class="val">${escapeHtml(subject)}</span></div>
+        </div>
+        <div class="email-body-content">
+          <p>Hi all,</p>
+          <p>${escapeHtml(opener)} Below is the GRR Retention snapshot for the week ending <strong>${escapeHtml(wkEnd)}</strong>.</p>
+
+          <div class="email-sh">Performance — Week vs Month to Date</div>
+          <table class="email-stats-tbl">
+            <thead>
+              <tr>
+                <th style="text-align:left">Metric</th>
+                <th>This Week<br><span style="font-weight:400;font-size:10px">${escapeHtml(weekLabel())}</span></th>
+                <th>Month to Date<br><span style="font-weight:400;font-size:10px">${escapeHtml(monthName)}</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${statsRows.map(([label, wk, mtd]) => `
+              <tr>
+                <td style="font-weight:600">${escapeHtml(label)}</td>
+                <td>${wk}</td>
+                <td>${mtd}</td>
+              </tr>`).join('')}
+              <tr class="wr">
+                <td>📊 Win rate (by value)</td>
+                <td>${wrWkCell}</td>
+                <td>${wrMtdCell}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="email-sh">Open Pipeline</div>
+          <p>Total open at-risk book: <strong>${fmtGBP(openVal)}</strong> across <strong>${open.length}</strong> opportunit${open.length===1?'y':'ies'}.</p>
+
+          ${urgent.length ? `
+          <div class="email-sh" style="color:#E11D48">⏰ Upcoming Cancellations (next 30 days)</div>
+          ${urgent.slice(0,5).map(r => `
+          <div class="email-urgent">
+            <strong>${escapeHtml(r['Account Name']||r['Opp Name']||'—')}</strong> &nbsp;·&nbsp;
+            ${fmtGBP(r['DNR Risk'])} &nbsp;·&nbsp;
+            Cancels ${escapeHtml(formatDate(r['Cancel Effective Date']))}
+            ${r['Owner'] ? ` &nbsp;·&nbsp; Owner: ${escapeHtml(r['Owner'])}` : ''}
+          </div>`).join('')}
+          ${urgent.length > 5 ? `<p style="font-size:11px;color:var(--text-muted)">+${urgent.length-5} more — see Open Opportunities tab.</p>` : ''}
+          <p><strong>Action needed:</strong> please confirm owner coverage on the ${urgent.length} account${urgent.length===1?' above':'s above'} (${fmtGBP(urgentVal)} combined risk).</p>
+          ` : '<p>No cancellation dates falling within the next 30 days — pipeline risk is not imminent.</p>'}
+
+          ${comps.length ? `
+          <div class="email-sh">🎯 Competitor Signal</div>
+          ${comps.slice(0,3).map(c => `
+          <div class="email-comp"><strong>${escapeHtml(c.name)}</strong> (${escapeHtml(c.category)}) — named in <strong>${c.opps}</strong> opp${c.opps===1?'':'s'}, ${fmtGBP(c.value)} at risk.</div>
+          `).join('')}
+          ` : ''}
+
+          <hr class="email-divider" />
+          <div class="email-sig">
+            <div>[Your name]</div>
+            <div>GRR Retention Team</div>
+            <div style="margin-top:6px;font-size:11px">📎 Full dashboard available — upload the Power BI export to the GRR Retention tool for the complete breakdown.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout info" style="margin-top:16px;max-width:740px;margin-left:auto;margin-right:auto">ℹ MTD covers ${escapeHtml(monthName)} (1st to the latest data point in your export). All figures are sourced from your uploaded file — nothing leaves your browser.</div>
+    </div>`;
+
+  // ══════════ Plain-text copy ══════════
+  let txt = `Subject: ${subject}\n\nHi all,\n\n${opener} Below is the GRR Retention snapshot for the week ending ${wkEnd}.\n\n`;
+  txt += `━━━ THIS WEEK (${weekLabel()}) ━━━\n`;
+  txt += `📥 Incoming at-risk  : ${incWk.length} opps  |  ${fmtGBP(incValWk)}\n`;
+  txt += `✅ Saved             : ${wonWk.length} account${wonWk.length===1?'':'s'}  |  ${fmtGBP(wonValWk)}\n`;
+  txt += `❌ Lost              : ${lostWk.length} account${lostWk.length===1?'':'s'}  |  ${fmtGBP(lostValWk)}\n`;
+  txt += `📊 Win rate (value)  : ${wrWk!==null ? fmtPct(wrWk) : 'n/a'}\n\n`;
+  if (mtdRange) {
+    txt += `━━━ MONTH TO DATE (${monthName}) ━━━\n`;
+    txt += `📥 Incoming at-risk  : ${incMtd.length} opps  |  ${fmtGBP(incValMtd)}\n`;
+    txt += `✅ Saved             : ${wonMtd.length} account${wonMtd.length===1?'':'s'}  |  ${fmtGBP(wonValMtd)}\n`;
+    txt += `❌ Lost              : ${lostMtd.length} account${lostMtd.length===1?'':'s'}  |  ${fmtGBP(lostValMtd)}\n`;
+    txt += `📊 Win rate (value)  : ${wrMtd!==null ? fmtPct(wrMtd) : 'n/a'}\n\n`;
+  }
+  txt += `━━━ OPEN PIPELINE ━━━\n`;
+  txt += `⚠️  Total at risk    : ${open.length} opps  |  ${fmtGBP(openVal)}\n`;
+  if (urgent.length) {
+    txt += `\n⏰ Cancellations due within 30 days — ${fmtGBP(urgentVal)} combined:\n`;
+    urgent.slice(0,5).forEach(r => {
+      txt += `   → ${r['Account Name']||r['Opp Name']||'—'}  (${fmtGBP(r['DNR Risk'])}, cancels ${formatDate(r['Cancel Effective Date'])})\n`;
+    });
+    txt += `\nAction: please confirm owner coverage on the ${urgent.length} account${urgent.length===1?' above':'s above'}.\n`;
+  }
+  if (comps.length) {
+    txt += `\n🎯 Competitor signal:\n`;
+    comps.slice(0,3).forEach(c => {
+      txt += `   • ${c.name} (${c.category}) — ${c.opps} opp${c.opps===1?'':'s'}, ${fmtGBP(c.value)} at risk\n`;
+    });
+  }
+  txt += `\n—\n[Your name]\nGRR Retention Team\n`;
+  LAST_EMAIL_TEXT = txt;
+
+  document.getElementById('pane-email').innerHTML = html;
+}
+
+function copyEmail() {
+  if (!LAST_EMAIL_TEXT) return;
+  navigator.clipboard.writeText(LAST_EMAIL_TEXT)
+    .then(() => showBanner('Email text copied to clipboard'))
+    .catch(() => showBanner('Could not copy', 'error'));
+}
+function downloadEmail() {
+  if (!LAST_EMAIL_TEXT) return;
+  const blob = new Blob([LAST_EMAIL_TEXT], { type:'text/plain' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `GRR_Exec_Email_${new Date().toISOString().slice(0,10)}.txt`;
+  a.click(); URL.revokeObjectURL(url);
 }
 
 // ============================================================
