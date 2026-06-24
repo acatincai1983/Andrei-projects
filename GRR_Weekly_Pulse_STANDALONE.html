@@ -288,6 +288,7 @@ let FILTERED = [];
 let CURRENT_TEAM = '__ALL__';
 let PERIOD_START = null;
 let PERIOD_END = null;
+let WEEK_HAS_DATES = false;
 let COMMENTS = {};            // caseId -> edited comment text
 const COMMENT_STORE_KEY = 'grr_weekly_pulse_comments_v1';
 
@@ -406,18 +407,30 @@ function normaliseRow(row) {
 }
 
 function detectPeriod() {
-  // Period = the activity window (when cases came in / were closed).
-  // Cancel Effective Date is deliberately excluded — it is often far in the
-  // future and would wrongly stretch a 7-day week into months.
+  // The reporting week is the rolling 7-day window ending at the most recent
+  // activity date in the file. "Incoming" = cases CREATED inside this window —
+  // NOT every row, because an export usually also carries the standing open
+  // book (cases created in earlier weeks). Cancel Effective Date is excluded
+  // (it is often future-dated and would distort the window).
   const dates = [];
   for (const r of RAW_DATA) {
     ['Opp Created Date','Opp Won Lost Date'].forEach(f => {
       const d = parseDate(r[f]); if (d) dates.push(d);
     });
   }
-  if (!dates.length) { PERIOD_START = null; PERIOD_END = null; return; }
-  PERIOD_START = new Date(Math.min(...dates.map(d => d.getTime()))); PERIOD_START.setHours(0,0,0,0);
-  PERIOD_END   = new Date(Math.max(...dates.map(d => d.getTime()))); PERIOD_END.setHours(23,59,59,999);
+  if (!dates.length) { PERIOD_START = null; PERIOD_END = null; WEEK_HAS_DATES = false; return; }
+  const anchor = new Date(Math.max(...dates.map(d => d.getTime())));
+  PERIOD_END = new Date(anchor); PERIOD_END.setHours(23,59,59,999);
+  PERIOD_START = new Date(anchor); PERIOD_START.setDate(PERIOD_START.getDate() - 6); PERIOD_START.setHours(0,0,0,0);
+  WEEK_HAS_DATES = true;
+}
+
+// Is a row's date-field inside the reporting week? If the file has no dates at
+// all, fall back to treating every row as this week.
+function inWeek(r, field) {
+  if (!WEEK_HAS_DATES) return true;
+  const d = parseDate(r[field]);
+  return !!d && d >= PERIOD_START && d <= PERIOD_END;
 }
 
 function periodLabel() {
@@ -443,10 +456,11 @@ function onDataLoaded(fileName) {
   sel.style.display = 'inline-block';
   document.getElementById('status-bar').classList.add('active');
   document.getElementById('status-file').textContent = fileName;
-  document.getElementById('status-rows').textContent = RAW_DATA.length;
+  const incCount = weekStats(RAW_DATA).incCount;
+  document.getElementById('status-rows').textContent = `${incCount} new this week · ${RAW_DATA.length} in file`;
   document.getElementById('status-teams').textContent = teams.length;
   document.getElementById('status-period').textContent = periodLabel();
-  document.getElementById('meta-info').innerHTML = `<strong>${RAW_DATA.length}</strong> cases · ${teams.length} team lead${teams.length===1?'':'s'} · ${escapeHtml(periodLabel())}`;
+  document.getElementById('meta-info').innerHTML = `<strong>${incCount}</strong> new this week · ${RAW_DATA.length} rows in file · ${teams.length} team lead${teams.length===1?'':'s'} · ${escapeHtml(periodLabel())}`;
   document.getElementById('empty-state').style.display = 'none';
   document.getElementById('tabstrip').style.display = 'flex';
   document.getElementById('print-btn').style.display = 'inline-block';
@@ -500,11 +514,14 @@ function render() {
 
 function teamName() { return CURRENT_TEAM === '__ALL__' ? 'All team leads' : CURRENT_TEAM; }
 
-// Core weekly aggregates (whole upload = the week)
+// Core weekly aggregates.
+//  incoming = cases CREATED in the reporting week (new at-risk value this week)
+//  won/lost = cases CLOSED in the reporting week
+//  open     = the full standing open book (carried pipeline, any age)
 function weekStats(rows) {
-  const incoming = rows;                              // every case in a 7-day export is "incoming this week"
-  const won  = rows.filter(isWon);
-  const lost = rows.filter(isLost);
+  const incoming = rows.filter(r => inWeek(r, 'Opp Created Date'));
+  const won  = rows.filter(r => isWon(r)  && inWeek(r, 'Opp Won Lost Date'));
+  const lost = rows.filter(r => isLost(r) && inWeek(r, 'Opp Won Lost Date'));
   const open = rows.filter(isOpen);
   return {
     incCount: incoming.length,
@@ -514,6 +531,18 @@ function weekStats(rows) {
     openCount: open.length, openVal: open.reduce((s,r)=>s+(r['DNR Risk']||0),0),
     won, lost, open, incoming,
   };
+}
+
+// This week's cases for the Notes tab = new + closed this week (deduped).
+function weekCases(rows) {
+  const s = weekStats(rows);
+  const seen = new Set(); const out = [];
+  for (const r of [...s.incoming, ...s.won, ...s.lost]) {
+    const id = caseId(r);
+    if (seen.has(id)) continue;
+    seen.add(id); out.push(r);
+  }
+  return out;
 }
 
 // ============================================================
@@ -557,14 +586,21 @@ function renderSnapshot() {
         </div>
       </div>
 
-      <div class="section-header">CASE BREAKDOWN — THIS WEEK</div>
+      <div class="section-header">THIS WEEK'S FLOW — ${escapeHtml(periodLabel().toUpperCase())}</div>
       <table>
-        <thead><tr><th>Status</th><th class="num">Cases</th><th class="num">Value (£)</th><th class="num">Share of cases</th></tr></thead>
+        <thead><tr><th>Movement</th><th class="num">Cases</th><th class="num">Value (£)</th></tr></thead>
         <tbody>
-          <tr><td class="bold">📥 Incoming (total)</td><td class="num">${s.incCount}</td><td class="num bold">${fmtGBP(s.incVal)}</td><td class="num">100%</td></tr>
-          <tr><td>✅ Closed Won (saved)</td><td class="num">${s.wonCount}</td><td class="num won">${fmtGBP(s.wonVal)}</td><td class="num">${s.incCount?fmtPct(s.wonCount/s.incCount):'—'}</td></tr>
-          <tr><td>❌ Closed Lost</td><td class="num">${s.lostCount}</td><td class="num lost">${fmtGBP(s.lostVal)}</td><td class="num">${s.incCount?fmtPct(s.lostCount/s.incCount):'—'}</td></tr>
-          <tr><td>⏳ Still Open</td><td class="num">${s.openCount}</td><td class="num">${fmtGBP(s.openVal)}</td><td class="num">${s.incCount?fmtPct(s.openCount/s.incCount):'—'}</td></tr>
+          <tr><td class="bold">📥 New in this week (incoming)</td><td class="num bold">${s.incCount}</td><td class="num bold">${fmtGBP(s.incVal)}</td></tr>
+          <tr><td>✅ Saved this week (Closed Won)</td><td class="num">${s.wonCount}</td><td class="num won">${fmtGBP(s.wonVal)}</td></tr>
+          <tr><td>❌ Lost this week (Closed Lost)</td><td class="num">${s.lostCount}</td><td class="num lost">${fmtGBP(s.lostVal)}</td></tr>
+        </tbody>
+      </table>
+
+      <div class="section-header">STANDING OPEN PIPELINE (carried, all weeks)</div>
+      <table>
+        <thead><tr><th>Position</th><th class="num">Cases</th><th class="num">Value at Risk (£)</th></tr></thead>
+        <tbody>
+          <tr><td class="bold">⏳ Open opportunities</td><td class="num bold">${s.openCount}</td><td class="num bold">${fmtGBP(s.openVal)}</td></tr>
         </tbody>
       </table>
 
@@ -579,7 +615,7 @@ function renderSnapshot() {
         </div>
       </div>
 
-      <div class="callout info">📌 This tool treats every case in the upload as part of the current week. Use the team filter (top-right) to slice by team lead — every tab, chart and the email update instantly.</div>
+      <div class="callout info">📌 <strong>Incoming</strong> = cases <strong>created in the last 7 days</strong> (${escapeHtml(periodLabel())}); this is your new at-risk value for the week. <strong>Open</strong> is your full standing pipeline (carried from any week). Use the team filter (top-right) to slice by team lead — every tab updates instantly.</div>
     </div>`;
   document.getElementById('pane-snapshot').innerHTML = html;
 
@@ -604,7 +640,8 @@ function renderSnapshot() {
 // 2 — CASE NOTES (editable, persisted)
 // ============================================================
 function renderNotes() {
-  const sorted = [...FILTERED].sort((a,b) => {
+  // This week's cases: new + closed this week (not the entire carried book).
+  const sorted = [...weekCases(FILTERED)].sort((a,b) => {
     const av = isWon(a) ? (a['Amount Saved']||0) : (a['DNR Risk']||0);
     const bv = isWon(b) ? (b['Amount Saved']||0) : (b['DNR Risk']||0);
     return bv - av;
@@ -694,7 +731,7 @@ function markTag(id, on) {
   if (tag) tag.classList.toggle('show', on);
 }
 function updateEditedCount() {
-  const n = FILTERED.filter(isEdited).length;
+  const n = weekCases(FILTERED).filter(isEdited).length;
   const el = document.getElementById('edited-count');
   if (el) el.textContent = `${n} edited`;
 }
@@ -704,7 +741,7 @@ function resetComments() {
 }
 function exportComments() {
   const rows = [['Account','Opp Name','Owner','Product Family','Stage','DNR Risk','Amount Saved','Comment','Edited?']];
-  FILTERED.forEach(r => {
+  weekCases(FILTERED).forEach(r => {
     rows.push([
       r['Account Name']||'', r['Opp Name']||'', r['Owner']||'', r['Product Family']||'',
       r['Opp Stage Name']||'', r['DNR Risk']||0, r['Amount Saved']||0,
@@ -723,7 +760,7 @@ function exportComments() {
 // 3 — CANCELLED PRODUCTS
 // ============================================================
 function renderCancelled() {
-  const lost = FILTERED.filter(isLost);
+  const lost = weekStats(FILTERED).lost;   // cancellations closed THIS week
   const lostVal = lost.reduce((s,r)=>s+(r['DNR Risk']||0),0);
 
   // By product family
@@ -787,7 +824,7 @@ function renderCancelled() {
         </tbody>
       </table>
 
-      <div class="callout">⚠ Cancelled = cases closed as <strong>Closed Lost</strong> in this upload. The product family with the largest bar is where you are bleeding the most value this week — worth a root-cause look on the Churn Analysis tab.</div>
+      <div class="callout">⚠ Cancelled = cases closed as <strong>Closed Lost this week</strong> (${escapeHtml(periodLabel())}). The product family with the largest bar is where you are bleeding the most value this week — worth a root-cause look on the Churn Analysis tab.</div>
     </div>`;
   document.getElementById('pane-cancelled').innerHTML = html;
 
@@ -804,7 +841,7 @@ function renderCancelled() {
 // 4 — CHURN ANALYSIS (reason, reason×product)
 // ============================================================
 function renderChurn() {
-  const lost = FILTERED.filter(isLost);
+  const lost = weekStats(FILTERED).lost;   // losses closed THIS week
   const lostVal = lost.reduce((s,r)=>s+(r['DNR Risk']||0),0);
 
   // By churn reason
