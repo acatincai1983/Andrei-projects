@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GRR Weekly Pulse — Last 7 Days</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<style>
+:root {
+  --plum: #23272E;        /* primary graphite */
+  --teal: #F59E0B;        /* accent amber */
+  --teal-light: #FDE6BF;  /* light amber */
+  --bg: #F1EFEA;
+  --bg-page: #F4F3F0;
+  --red: #E11D48;
+  --red-soft: #FCE0E6;
+  --green: #16A34A;
+  --text: #23272E;
+  --text-muted: #6B7280;
+  --border: #E2DCD0;
+  --amber-bg: #FFF7E6;
+  --amber-text: #92660A;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-page); color: var(--text); font-size: 12px;
+}
+.shell { max-width: 1700px; margin: 0 auto; }
+
+/* TOPBAR */
+.topbar {
+  background: white; padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 2px 4px rgba(35,39,46,0.06);
+  gap: 16px;
+}
+.topbar h1 { margin: 0; font-size: 18px; font-weight: 700; color: var(--plum); }
+.topbar h1 .pill { font-size: 10px; background: var(--teal); color: var(--plum); padding: 2px 8px; border-radius: 10px; vertical-align: middle; margin-left: 8px; font-weight: 700; }
+.topbar .sub { font-size: 12px; color: #B45309; font-weight: 600; margin-top: 2px; }
+.actions { display: flex; gap: 8px; align-items: center; }
+.upload-btn { background: var(--teal); color: var(--plum); border: none; padding: 9px 16px; border-radius: 6px; font-family: inherit; font-weight: 700; font-size: 12px; cursor: pointer; }
+.upload-btn:hover { background: #D97706; color: white; }
+.settings-btn { background: white; color: var(--plum); border: 1px solid var(--border); padding: 8px 12px; border-radius: 6px; font-family: inherit; font-weight: 600; font-size: 12px; cursor: pointer; }
+.settings-btn:hover { background: var(--teal-light); }
+.team-select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 12px; color: var(--text); background: white; cursor: pointer; }
+
+.upload-zone { border: 2px dashed var(--teal); border-radius: 8px; padding: 36px; background: var(--teal-light); color: var(--plum); font-size: 15px; font-weight: 600; text-align: center; cursor: pointer; margin: 24px; transition: all 0.15s; }
+.upload-zone:hover { background: var(--bg); }
+.upload-zone.dragging { background: var(--bg); border-style: solid; }
+.upload-zone .sub { display: block; margin-top: 8px; font-size: 12px; color: var(--text); font-weight: 400; }
+input[type="file"] { display: none; }
+
+.status-bar { margin: 0 24px 12px; padding: 10px 14px; background: white; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; color: var(--text-muted); display: none; }
+.status-bar.active { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.status-bar strong { color: var(--plum); }
+
+/* TAB STRIP */
+.tabstrip { display: flex; background: var(--bg); border-bottom: 1px solid var(--border); padding: 0 16px; overflow-x: auto; position: sticky; top: 67px; z-index: 99; }
+.tab { padding: 10px 16px; font-size: 12px; font-weight: 500; cursor: pointer; color: var(--text); white-space: nowrap; border-right: 1px solid var(--border); background: var(--bg); border-top: 3px solid transparent; }
+.tab:hover { background: white; }
+.tab.active { background: white; color: var(--plum); font-weight: 700; border-top-color: var(--teal); }
+
+.pane { display: none; padding: 0; background: white; min-height: 600px; }
+.pane.active { display: block; }
+
+.sheet { padding: 24px; }
+.sheet-title { background: var(--plum); color: white; padding: 14px 18px; font-size: 16px; font-weight: 700; text-align: center; border-radius: 4px 4px 0 0; }
+.sheet-subtitle { background: var(--teal); color: var(--plum); padding: 10px 18px; font-size: 13px; font-weight: 700; text-align: center; }
+.section-header { background: var(--plum); color: white; padding: 9px 14px; font-size: 12px; font-weight: 700; margin-top: 20px; border-radius: 3px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 11px; background: white; }
+table thead th { background: var(--teal); color: var(--plum); font-weight: 700; padding: 8px 10px; text-align: left; font-size: 11px; }
+table tbody td { padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+table tbody tr:nth-child(even) { background: var(--bg); }
+table tbody tr:hover { background: var(--teal-light); }
+table tbody tr.total { background: var(--teal-light) !important; font-weight: 700; }
+table tbody tr.total td { color: var(--plum); }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.bold { font-weight: 700; color: var(--plum); }
+td.lost { color: var(--red); font-weight: 600; }
+td.won { color: var(--green); font-weight: 600; }
+th.num { text-align: right; }
+
+.callout { background: var(--amber-bg); border-left: 4px solid #D97706; padding: 12px 16px; margin: 16px 0; font-size: 11px; color: var(--amber-text); line-height: 1.5; }
+.callout.info { background: var(--teal-light); border-left-color: var(--teal); color: var(--plum); }
+
+.scrollable { max-height: 760px; overflow-y: auto; border: 1px solid var(--border); }
+
+.badge { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; background: var(--teal-light); color: var(--plum); }
+.badge.green { background: #DCFCE7; color: #166534; }
+.badge.red { background: var(--red-soft); color: #9F1239; }
+.badge.grey { background: #ECECEC; color: #555; }
+
+.chart-wrap { position: relative; height: 320px; margin-top: 12px; padding: 12px; background: white; }
+.chart-wrap.tall { height: 380px; }
+.chart-block { margin-top: 16px; background: white; border: 1px solid var(--border); border-radius: 6px; padding: 16px; }
+.chart-block h3 { margin: 0 0 6px 0; font-size: 14px; color: var(--plum); }
+.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 900px) { .chart-grid { grid-template-columns: 1fr; } }
+
+.empty { text-align: center; padding: 80px 24px; color: var(--text-muted); }
+.empty h2 { color: var(--plum); margin-bottom: 12px; font-size: 22px; }
+.empty p { max-width: 620px; margin: 0 auto 14px; line-height: 1.6; }
+
+.banner { position: fixed; top: 20px; right: 20px; padding: 14px 22px; border-radius: 8px; font-weight: 600; z-index: 1000; }
+.banner.success { background: var(--green); color: white; box-shadow: 0 4px 12px rgba(22,163,74,0.3); }
+.banner.error { background: var(--red); color: white; box-shadow: 0 4px 12px rgba(225,29,72,0.3); }
+
+/* ── KPI CARDS ── */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin: 18px 0 4px; }
+.kpi-card { background: white; border: 1px solid var(--border); border-top: 4px solid var(--teal); border-radius: 8px; padding: 16px 18px; box-shadow: 0 1px 3px rgba(35,39,46,0.05); }
+.kpi-card.plum  { border-top-color: var(--plum); }
+.kpi-card.green { border-top-color: var(--green); }
+.kpi-card.red   { border-top-color: var(--red); }
+.kpi-card .kpi-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+.kpi-card .kpi-value { font-size: 28px; font-weight: 700; color: var(--plum); margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
+.kpi-card .kpi-value.green { color: var(--green); }
+.kpi-card .kpi-value.red   { color: var(--red); }
+.kpi-card .kpi-sub { font-size: 11px; color: var(--text-muted); }
+
+/* ── EDITABLE CASE NOTES ── */
+.case-card { border: 1px solid var(--border); border-left: 4px solid var(--teal); border-radius: 8px; padding: 14px 16px; margin: 12px 0; background: white; }
+.case-card.won  { border-left-color: var(--green); }
+.case-card.lost { border-left-color: var(--red); }
+.case-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.case-head .name { font-weight: 700; color: var(--plum); font-size: 14px; }
+.case-head .meta { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+.case-head .value { font-size: 17px; font-weight: 700; color: var(--plum); white-space: nowrap; }
+.case-card.lost .value { color: var(--red); }
+.case-card.won  .value { color: var(--green); }
+.comment-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin: 12px 0 4px; display: flex; align-items: center; gap: 8px; }
+.comment-box {
+  border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px;
+  font-family: inherit; font-size: 12px; line-height: 1.55; color: var(--text);
+  background: #FDFCFA; min-height: 44px; outline: none; transition: border 0.15s, background 0.15s;
+  white-space: pre-wrap;
+}
+.comment-box:focus { border-color: var(--teal); background: white; box-shadow: 0 0 0 3px rgba(245,158,11,0.12); }
+.comment-box.edited { border-left: 3px solid var(--teal); }
+.edited-tag { font-size: 9px; background: var(--teal); color: var(--plum); padding: 1px 6px; border-radius: 8px; font-weight: 700; display: none; }
+.edited-tag.show { display: inline-block; }
+.notes-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 14px 0 4px; }
+.notes-toolbar input[type="text"] { flex: 1; min-width: 200px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 12px; }
+
+/* ── ACTION BUTTONS ── */
+.ai-actions { display: flex; gap: 8px; margin: 14px 0 4px; flex-wrap: wrap; }
+.ai-action-btn { background: white; color: var(--plum); border: 1px solid var(--border); padding: 7px 14px; border-radius: 6px; font-family: inherit; font-weight: 600; font-size: 12px; cursor: pointer; }
+.ai-action-btn:hover { background: var(--teal-light); }
+.ai-action-btn.primary { background: var(--teal); border-color: var(--teal); }
+.ai-action-btn.primary:hover { background: #D97706; color: white; }
+
+/* ── EMAIL PREVIEW ── */
+.email-preview-wrap { background: white; border: 1px solid var(--border); border-radius: 8px; max-width: 760px; margin: 20px auto; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+.email-meta { background: #F8F7F4; border-bottom: 1px solid var(--border); padding: 14px 22px; border-radius: 8px 8px 0 0; }
+.email-meta-row { display: flex; gap: 8px; align-items: baseline; margin: 4px 0; font-size: 12px; }
+.email-meta-row .lbl { font-weight: 700; color: var(--text-muted); min-width: 58px; }
+.email-meta-row.subj .val { font-weight: 700; font-size: 13px; color: var(--plum); }
+.email-body-content { padding: 24px 28px 28px; font-size: 13px; line-height: 1.75; color: var(--text); }
+.email-body-content p { margin: 10px 0; }
+.email-stats-tbl { width: 100%; border-collapse: collapse; margin: 10px 0 18px; font-size: 12.5px; }
+.email-stats-tbl th { background: var(--plum); color: white; padding: 8px 12px; font-size: 11px; font-weight: 700; }
+.email-stats-tbl th:not(:first-child) { text-align: right; }
+.email-stats-tbl td { padding: 7px 12px; border-bottom: 1px solid var(--border); }
+.email-stats-tbl td:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.email-stats-tbl tr:nth-child(even) { background: var(--bg); }
+.email-sh { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin: 20px 0 6px; }
+.email-row { padding: 7px 12px; border-left: 3px solid var(--teal); margin: 4px 0; font-size: 12px; border-radius: 0 4px 4px 0; background: var(--amber-bg); color: var(--text); }
+.email-row.red { border-left-color: var(--red); background: #FEF2F2; }
+.email-sig { margin-top: 24px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+.email-divider { border: none; border-top: 1px solid var(--border); margin: 4px 0 12px; }
+
+@media print {
+  body { background: white; }
+  .topbar, .tabstrip, .upload-zone, .status-bar, .upload-btn, .team-select, .ai-actions, #empty-state { display: none !important; }
+  .shell { max-width: none; }
+  .pane { display: block !important; page-break-after: always; }
+  .pane:empty { display: none !important; }
+  .scrollable { max-height: none !important; overflow: visible !important; }
+  .chart-block, .callout, .case-card { page-break-inside: avoid; }
+  table thead th, .sheet-title, .sheet-subtitle, .section-header, .kpi-card { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<div class="topbar">
+  <div>
+    <h1>GRR Weekly Pulse <span class="pill">LAST 7 DAYS</span></h1>
+    <div class="sub" id="meta-info">Upload a 7-day Power BI export to begin</div>
+  </div>
+  <div class="actions">
+    <select class="team-select" id="team-filter" style="display:none"></select>
+    <button class="settings-btn" id="print-btn" style="display:none" onclick="window.print()">🖨 Print / PDF</button>
+    <button class="upload-btn" onclick="document.getElementById('file-input').click()">↻ Upload weekly export</button>
+    <input type="file" id="file-input" accept=".xlsx,.xls,.csv" />
+  </div>
+</div>
+
+<div class="upload-zone" id="upload-zone">
+  📤 Drop your last-7-days Power BI export here, or click to browse
+  <span class="sub">Built for a single week of data. The tool reads the date range from your file and treats the whole export as "this week".</span>
+</div>
+
+<div class="status-bar" id="status-bar">
+  <div><strong>File:</strong> <span id="status-file">—</span></div>
+  <div><strong>Cases:</strong> <span id="status-rows">—</span></div>
+  <div><strong>Team leads:</strong> <span id="status-teams">—</span></div>
+  <div><strong>Period:</strong> <span id="status-period">—</span></div>
+</div>
+
+<div class="tabstrip" id="tabstrip" style="display:none">
+  <div class="tab active" data-pane="snapshot">📊 Weekly Snapshot</div>
+  <div class="tab" data-pane="notes">📝 Case Notes (editable)</div>
+  <div class="tab" data-pane="cancelled">🚫 Cancelled Products</div>
+  <div class="tab" data-pane="churn">🔍 Churn Analysis</div>
+  <div class="tab" data-pane="trends">📈 Trends</div>
+  <div class="tab" data-pane="email">📧 Executive Email</div>
+</div>
+
+<div id="empty-state" class="empty">
+  <h2>No data loaded yet</h2>
+  <p>Drop a Power BI export covering the last 7 days. This tool gives you incoming DNR value and case volume, editable per-case comments, cancelled-product and churn analysis, in-week trends, and a ready-to-send executive email.</p>
+  <p style="font-size:11px">Your edits to case comments are saved in this browser only — nothing leaves your computer.</p>
+</div>
+
+<div class="pane" id="pane-snapshot"></div>
+<div class="pane" id="pane-notes"></div>
+<div class="pane" id="pane-cancelled"></div>
+<div class="pane" id="pane-churn"></div>
+<div class="pane" id="pane-trends"></div>
+<div class="pane" id="pane-email"></div>
+
+</div>
+
+<script>
+// ============================================================
+// STATE & CONFIG
+// ============================================================
+let RAW_DATA = [];
+let FILTERED = [];
+let CURRENT_TEAM = '__ALL__';
+let PERIOD_START = null;
+let PERIOD_END = null;
+let COMMENTS = {};            // caseId -> edited comment text
+const COMMENT_STORE_KEY = 'grr_weekly_pulse_comments_v1';
+
+const ACCESS = {
+  plum: '#23272E', teal: '#F59E0B', tealLight: '#FDE6BF',
+  red: '#E11D48', green: '#16A34A', text: '#23272E', amber2: '#B45309',
+  blue: '#6366F1', slate: '#64748B',
+};
+Chart.defaults.font.family = "'Open Sans', sans-serif";
+Chart.defaults.color = ACCESS.text;
+
+const CLOSED_STAGES = new Set(['Closed Won', 'Closed Lost', 'Closed']);
+const UNCONTROLLABLE = new Set(['Business has ceased trading', 'Merger/Acquisition', 'Product', 'Access Cannibalised']);
+
+const fmtGBP = v => v == null || isNaN(v) ? '—' : ((v < 0 ? '−£' : '£') + Math.abs(Math.round(v)).toLocaleString('en-GB'));
+const fmtNum = v => v == null ? '—' : v.toLocaleString('en-GB');
+const fmtPct = v => v == null || isNaN(v) ? '—' : (v * 100).toFixed(1) + '%';
+function parseDate(d) {
+  if (d == null) return null;
+  if (d instanceof Date) return isNaN(d.getTime()) ? null : d;
+  if (typeof d === 'number') { const dt = new Date((d - 25569) * 86400 * 1000); return isNaN(dt.getTime()) ? null : dt; }
+  const dt = new Date(d); return isNaN(dt.getTime()) ? null : dt;
+}
+function formatDate(d) {
+  const dt = parseDate(d);
+  return dt ? dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+}
+function escapeHtml(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escapeAttr(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+// ============================================================
+// THEMES & COMPETITORS (mined from Description)
+// ============================================================
+const THEMES = [
+  { name: 'Pricing / commercials', pattern: /(too expensive|too high|inflated|reduce spend|reduce cost|cost cutting|cost-cutting|budget|cheaper|less expensive|pricing concerns?|price increase|increment)/i },
+  { name: 'Support / service quality', pattern: /(poor support|bad support|support is|service quality|service level|\bsla\b|response time|slow response)/i },
+  { name: 'Liquidation / administration', pattern: /(liquidation|administration|insolven|ceased trading|wound up)/i },
+  { name: 'Merger / acquisition', pattern: /(\bmerg|\bacqui|\btakeover|bought by|sold to)/i },
+  { name: 'Migrating to competitor', pattern: /(moving to|switching to|migrated to|chose to go with|signed with|going with)/i },
+  { name: 'Onboarding / setup problems', pattern: /(onboard|setup|never (got |been )?set up|never used|never been used|implementation fail)/i },
+  { name: 'Product functionality gaps', pattern: /(missing.{0,20}(feature|function)|doesnt (do|have|work)|not able to|limited functionality|product defect|stock (module|management))/i },
+  { name: 'Invoice / billing disputes', pattern: /(invoice.{0,20}(dispute|unpaid|outstanding|issue)|billing.{0,15}(dispute|issue|problem)|unpaid invoice)/i },
+];
+
+const COMPETITORS = {
+  'Tevalis': 'EPOS', 'Zonal': 'EPOS', 'Comtrex': 'EPOS', 'NCR': 'EPOS',
+  'Aloha': 'EPOS', 'Toast': 'EPOS', 'Square': 'EPOS', 'Vita Mojo': 'EPOS', 'Revel': 'EPOS', 'Lightspeed': 'EPOS',
+  'SevenRooms': 'Reservations', 'Seven Rooms': 'Reservations', 'ResDiary': 'Reservations',
+  'OpenTable': 'Reservations', 'TheFork': 'Reservations', 'Bookatable': 'Reservations', 'Eveve': 'Reservations',
+  'LightYear': 'Procurement', 'Light Year': 'Procurement', 'Procurant': 'Procurement', 'Marketman': 'Procurement',
+  'KitchenCUT': 'Procurement', 'Apicbase': 'Procurement', 'Foodics': 'Procurement', 'Fourth': 'Procurement',
+  'Flipdish': 'Order/Delivery', 'Deliverect': 'Order/Delivery', 'Mr Yum': 'Order/Delivery', 'Yumpingo': 'Order/Delivery',
+  'Deputy': 'Workforce', 'Quinyx': 'Workforce', 'Planday': 'Workforce', 'Bizimply': 'Workforce', '7shifts': 'Workforce', 'Harri': 'Workforce',
+};
+const AMBIGUOUS_COMPETITORS = new Set(['NCR', 'Square', 'Toast', 'Revel', 'Fourth', 'Harri', 'Deputy']);
+const COMP_CUE = /(competitor|moving to|switching to|migrat|signed with|going with|quoted|cheaper|alternative|demo|trial|chose|choosing|replac|tender|\brfp\b|proposal|switch)/i;
+
+function findCompetitorMentions(rows) {
+  const out = [], seen = new Set();
+  for (const [comp, cat] of Object.entries(COMPETITORS)) {
+    const canon = comp.replace(/\s+/g, '');
+    if (seen.has(canon)) continue;
+    const re = new RegExp(`\\b${comp.replace(/\s+/g, '\\s*')}\\b`, 'i');
+    const ambiguous = AMBIGUOUS_COMPETITORS.has(comp);
+    const matched = rows.filter(r => {
+      const d = r['Description'] || '';
+      if (!re.test(d)) return false;
+      return ambiguous ? COMP_CUE.test(d) : true;
+    });
+    if (!matched.length) continue;
+    seen.add(canon);
+    out.push({ name: comp, category: cat, opps: matched.length,
+      value: matched.reduce((s, r) => s + (r['DNR Risk'] || 0), 0), matched });
+  }
+  return out.sort((a, b) => b.value - a.value);
+}
+
+// ============================================================
+// FILE LOADING
+// ============================================================
+function showBanner(msg, type='success') {
+  const el = document.createElement('div'); el.className=`banner ${type}`; el.textContent=msg;
+  document.body.appendChild(el); setTimeout(() => el.remove(), 3500);
+}
+
+function handleFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array', cellDates: true });
+      let best=null, maxR=0;
+      for (const n of wb.SheetNames) {
+        const r = XLSX.utils.decode_range(wb.Sheets[n]['!ref'] || 'A1:A1');
+        if (r.e.r - r.s.r > maxR) { maxR = r.e.r - r.s.r; best = n; }
+      }
+      const json = XLSX.utils.sheet_to_json(wb.Sheets[best], { defval: null, raw: false });
+      if (!json.length) { showBanner('No data rows found', 'error'); return; }
+      RAW_DATA = json.map(normaliseRow).filter(r => r['Opp Name'] || r['Account Name']);
+      if (!RAW_DATA.length) { showBanner('No valid rows found', 'error'); return; }
+      onDataLoaded(file.name);
+      showBanner(`✓ Loaded ${RAW_DATA.length} cases`);
+    } catch (err) { console.error(err); showBanner(`Could not parse: ${err.message}`, 'error'); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function normaliseRow(row) {
+  const out = {};
+  for (const k in row) out[k.trim()] = row[k];
+  ['DNR Risk', 'Amount Saved'].forEach(f => {
+    const n = out[f] != null ? parseFloat(String(out[f]).replace(/[^0-9.-]/g, '')) : 0;
+    out[f] = isNaN(n) ? 0 : n;
+  });
+  return out;
+}
+
+function detectPeriod() {
+  const dates = [];
+  for (const r of RAW_DATA) {
+    ['Opp Created Date','Opp Won Lost Date','Cancel Effective Date'].forEach(f => {
+      const d = parseDate(r[f]); if (d) dates.push(d);
+    });
+  }
+  if (!dates.length) { PERIOD_START = null; PERIOD_END = null; return; }
+  PERIOD_START = new Date(Math.min(...dates.map(d => d.getTime()))); PERIOD_START.setHours(0,0,0,0);
+  PERIOD_END   = new Date(Math.max(...dates.map(d => d.getTime()))); PERIOD_END.setHours(23,59,59,999);
+}
+
+function periodLabel() {
+  if (!PERIOD_START) return 'this week';
+  return `${PERIOD_START.toLocaleDateString('en-GB',{day:'numeric',month:'short'})} – ${PERIOD_END.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}`;
+}
+
+function loadComments() {
+  try { COMMENTS = JSON.parse(localStorage.getItem(COMMENT_STORE_KEY)) || {}; }
+  catch { COMMENTS = {}; }
+}
+function saveComments() {
+  try { localStorage.setItem(COMMENT_STORE_KEY, JSON.stringify(COMMENTS)); } catch {}
+}
+
+function onDataLoaded(fileName) {
+  detectPeriod();
+  loadComments();
+  const teams = [...new Set(RAW_DATA.map(r => r['Team']).filter(Boolean))].sort();
+  const sel = document.getElementById('team-filter');
+  sel.innerHTML = `<option value="__ALL__">All team leads (${RAW_DATA.length})</option>` +
+    teams.map(c => `<option value="${escapeAttr(c)}">${escapeHtml(c)} (${RAW_DATA.filter(r => r['Team']===c).length})</option>`).join('');
+  sel.style.display = 'inline-block';
+  document.getElementById('status-bar').classList.add('active');
+  document.getElementById('status-file').textContent = fileName;
+  document.getElementById('status-rows').textContent = RAW_DATA.length;
+  document.getElementById('status-teams').textContent = teams.length;
+  document.getElementById('status-period').textContent = periodLabel();
+  document.getElementById('meta-info').innerHTML = `<strong>${RAW_DATA.length}</strong> cases · ${teams.length} team lead${teams.length===1?'':'s'} · ${escapeHtml(periodLabel())}`;
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('tabstrip').style.display = 'flex';
+  document.getElementById('print-btn').style.display = 'inline-block';
+  document.getElementById('upload-zone').style.display = 'none';
+  document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('pane-snapshot').classList.add('active');
+  applyFilter();
+}
+
+function applyFilter() {
+  CURRENT_TEAM = document.getElementById('team-filter').value;
+  FILTERED = (CURRENT_TEAM === '__ALL__') ? RAW_DATA : RAW_DATA.filter(r => r['Team'] === CURRENT_TEAM);
+  render();
+}
+
+// ── Case helpers ──
+function isOpen(r)  { return !CLOSED_STAGES.has(r['Opp Stage Name']); }
+function isWon(r)   { return r['Opp Stage Name'] === 'Closed Won'; }
+function isLost(r)  { return r['Opp Stage Name'] === 'Closed Lost'; }
+function caseId(r)  {
+  const base = (r['Opp Name'] || (r['Account Name']+'|'+(r['Opp Created Date']||''))).toString();
+  return base.trim();
+}
+function pulledComment(r) {
+  const d = (r['Description'] || '').toString().trim();
+  if (d) return d;
+  const n = (r['Next Step'] || '').toString().trim();
+  return n || '';
+}
+function effectiveComment(r) {
+  const id = caseId(r);
+  return Object.prototype.hasOwnProperty.call(COMMENTS, id) ? COMMENTS[id] : pulledComment(r);
+}
+function isEdited(r) { return Object.prototype.hasOwnProperty.call(COMMENTS, caseId(r)); }
+
+// ============================================================
+// RENDER
+// ============================================================
+let charts = {};
+function destroyCharts() { Object.values(charts).forEach(c => c?.destroy?.()); charts = {}; }
+
+function render() {
+  destroyCharts();
+  renderSnapshot();
+  renderNotes();
+  renderCancelled();
+  renderChurn();
+  renderTrends();
+  renderEmail();
+}
+
+function teamName() { return CURRENT_TEAM === '__ALL__' ? 'All team leads' : CURRENT_TEAM; }
+
+// Core weekly aggregates (whole upload = the week)
+function weekStats(rows) {
+  const incoming = rows;                              // every case in a 7-day export is "incoming this week"
+  const won  = rows.filter(isWon);
+  const lost = rows.filter(isLost);
+  const open = rows.filter(isOpen);
+  return {
+    incCount: incoming.length,
+    incVal:  incoming.reduce((s,r)=>s+(r['DNR Risk']||0),0),
+    wonCount: won.length,  wonVal:  won.reduce((s,r)=>s+(r['Amount Saved']||0),0),
+    lostCount: lost.length, lostVal: lost.reduce((s,r)=>s+(r['DNR Risk']||0),0),
+    openCount: open.length, openVal: open.reduce((s,r)=>s+(r['DNR Risk']||0),0),
+    won, lost, open, incoming,
+  };
+}
+
+// ============================================================
+// 1 — WEEKLY SNAPSHOT
+// ============================================================
+function renderSnapshot() {
+  const s = weekStats(FILTERED);
+  const wr = (s.wonVal+s.lostVal) > 0 ? s.wonVal/(s.wonVal+s.lostVal) : null;
+  const avgCase = s.incCount > 0 ? s.incVal/s.incCount : 0;
+
+  let html = `
+    <div class="sheet">
+      <div class="sheet-title">WEEKLY PULSE — SNAPSHOT</div>
+      <div class="sheet-subtitle">${escapeHtml(teamName())}  |  ${escapeHtml(periodLabel())}</div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card plum">
+          <div class="kpi-label">Incoming DNR Value</div>
+          <div class="kpi-value">${fmtGBP(s.incVal)}</div>
+          <div class="kpi-sub">across ${s.incCount} case${s.incCount===1?'':'s'} this week</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Case Volume</div>
+          <div class="kpi-value">${fmtNum(s.incCount)}</div>
+          <div class="kpi-sub">avg ${fmtGBP(avgCase)} per case</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Saved This Week</div>
+          <div class="kpi-value green">${fmtGBP(s.wonVal)}</div>
+          <div class="kpi-sub">${s.wonCount} win${s.wonCount===1?'':'s'}</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">Lost This Week</div>
+          <div class="kpi-value red">${fmtGBP(s.lostVal)}</div>
+          <div class="kpi-sub">${s.lostCount} loss${s.lostCount===1?'':'es'}</div>
+        </div>
+        <div class="kpi-card ${wr!==null ? (wr>=0.5?'green':'red') : ''}">
+          <div class="kpi-label">Win Rate (by value)</div>
+          <div class="kpi-value ${wr!==null ? (wr>=0.5?'green':'red') : ''}">${wr!==null?fmtPct(wr):'n/a'}</div>
+          <div class="kpi-sub">${s.openCount} still open (${fmtGBP(s.openVal)})</div>
+        </div>
+      </div>
+
+      <div class="section-header">CASE BREAKDOWN — THIS WEEK</div>
+      <table>
+        <thead><tr><th>Status</th><th class="num">Cases</th><th class="num">Value (£)</th><th class="num">Share of cases</th></tr></thead>
+        <tbody>
+          <tr><td class="bold">📥 Incoming (total)</td><td class="num">${s.incCount}</td><td class="num bold">${fmtGBP(s.incVal)}</td><td class="num">100%</td></tr>
+          <tr><td>✅ Closed Won (saved)</td><td class="num">${s.wonCount}</td><td class="num won">${fmtGBP(s.wonVal)}</td><td class="num">${s.incCount?fmtPct(s.wonCount/s.incCount):'—'}</td></tr>
+          <tr><td>❌ Closed Lost</td><td class="num">${s.lostCount}</td><td class="num lost">${fmtGBP(s.lostVal)}</td><td class="num">${s.incCount?fmtPct(s.lostCount/s.incCount):'—'}</td></tr>
+          <tr><td>⏳ Still Open</td><td class="num">${s.openCount}</td><td class="num">${fmtGBP(s.openVal)}</td><td class="num">${s.incCount?fmtPct(s.openCount/s.incCount):'—'}</td></tr>
+        </tbody>
+      </table>
+
+      <div class="chart-grid">
+        <div class="chart-block">
+          <h3>Value by status (£)</h3>
+          <div class="chart-wrap"><canvas id="chart-status-val"></canvas></div>
+        </div>
+        <div class="chart-block">
+          <h3>Case volume by status</h3>
+          <div class="chart-wrap"><canvas id="chart-status-vol"></canvas></div>
+        </div>
+      </div>
+
+      <div class="callout info">📌 This tool treats every case in the upload as part of the current week. Use the team filter (top-right) to slice by team lead — every tab, chart and the email update instantly.</div>
+    </div>`;
+  document.getElementById('pane-snapshot').innerHTML = html;
+
+  charts.statusVal = new Chart(document.getElementById('chart-status-val'), {
+    type: 'bar',
+    data: { labels: ['Saved', 'Lost', 'Open'],
+      datasets: [{ data: [s.wonVal, s.lostVal, s.openVal],
+        backgroundColor: [ACCESS.green, ACCESS.red, ACCESS.plum], borderRadius: 6 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
+      scales:{ y:{ ticks:{ callback:v=>'£'+(v/1000).toFixed(0)+'K' } } } }
+  });
+  charts.statusVol = new Chart(document.getElementById('chart-status-vol'), {
+    type: 'doughnut',
+    data: { labels: ['Saved', 'Lost', 'Open'],
+      datasets: [{ data: [s.wonCount, s.lostCount, s.openCount],
+        backgroundColor: [ACCESS.green, ACCESS.red, ACCESS.slate] }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom' } } }
+  });
+}
+
+// ============================================================
+// 2 — CASE NOTES (editable, persisted)
+// ============================================================
+function renderNotes() {
+  const sorted = [...FILTERED].sort((a,b) => {
+    const av = isWon(a) ? (a['Amount Saved']||0) : (a['DNR Risk']||0);
+    const bv = isWon(b) ? (b['Amount Saved']||0) : (b['DNR Risk']||0);
+    return bv - av;
+  });
+  const editedCount = sorted.filter(isEdited).length;
+
+  let cards = sorted.map(r => {
+    const cls = isWon(r) ? 'won' : isLost(r) ? 'lost' : '';
+    const id = caseId(r);
+    const comment = effectiveComment(r);
+    const edited = isEdited(r);
+    const val = isWon(r) ? r['Amount Saved'] : r['DNR Risk'];
+    const stageBadge = isWon(r) ? '<span class="badge green">Won</span>'
+      : isLost(r) ? '<span class="badge red">Lost</span>'
+      : `<span class="badge grey">${escapeHtml(r['Opp Stage Name']||'Open')}</span>`;
+    return `
+      <div class="case-card ${cls}">
+        <div class="case-head">
+          <div>
+            <div class="name">${escapeHtml(r['Account Name']||r['Opp Name']||'—')} ${stageBadge}</div>
+            <div class="meta">
+              ${escapeHtml(r['Owner']||'—')} · ${escapeHtml(r['Product Family']||'—')}
+              ${r['Cause'] ? ' · Cause: '+escapeHtml(r['Cause']) : ''}
+              ${parseDate(r['Cancel Effective Date']) ? ' · Cancels: '+escapeHtml(formatDate(r['Cancel Effective Date'])) : ''}
+            </div>
+          </div>
+          <div class="value">${fmtGBP(val)}</div>
+        </div>
+        <div class="comment-label">
+          Comment / note
+          <span class="edited-tag ${edited?'show':''}" data-tag="${escapeAttr(id)}">edited</span>
+        </div>
+        <div class="comment-box ${edited?'edited':''}" contenteditable="true"
+             data-comment="${escapeAttr(id)}"
+             data-default="${escapeAttr(pulledComment(r))}">${escapeHtml(comment) || '<span style="color:#aaa">Click to add a comment…</span>'}</div>
+      </div>`;
+  }).join('');
+
+  let html = `
+    <div class="sheet">
+      <div class="sheet-title">CASE NOTES — EDITABLE</div>
+      <div class="sheet-subtitle">${escapeHtml(teamName())}  |  ${escapeHtml(periodLabel())}  ·  ${sorted.length} case${sorted.length===1?'':'s'}</div>
+
+      <div class="callout info">✍️ Comments are pre-filled from the <strong>Description</strong> field in your upload. Click any comment to edit — changes save automatically in this browser and flow through to the Executive Email. Nothing leaves your computer.</div>
+
+      <div class="notes-toolbar">
+        <input type="text" id="notes-search" placeholder="🔍 Filter cases by account, owner, product or text…" />
+        <span class="badge" id="edited-count">${editedCount} edited</span>
+        <button class="ai-action-btn" onclick="exportComments()">⬇ Export comments (.csv)</button>
+        <button class="ai-action-btn" onclick="resetComments()">↺ Reset all to original</button>
+      </div>
+
+      <div id="notes-list">${sorted.length ? cards : '<div class="empty"><p>No cases in this view.</p></div>'}</div>
+    </div>`;
+  document.getElementById('pane-notes').innerHTML = html;
+
+  // Wire editable comment boxes
+  document.querySelectorAll('#notes-list [data-comment]').forEach(box => {
+    box.addEventListener('focus', () => {
+      if (box.querySelector('span')) box.textContent = ''; // clear placeholder
+    });
+    box.addEventListener('input', () => {
+      const id = box.dataset.comment;
+      const def = box.dataset.default;
+      const txt = box.innerText.trim();
+      if (txt === def) { delete COMMENTS[id]; box.classList.remove('edited'); markTag(id,false); }
+      else { COMMENTS[id] = txt; box.classList.add('edited'); markTag(id,true); }
+      saveComments();
+      updateEditedCount();
+    });
+    box.addEventListener('blur', () => {
+      if (!box.innerText.trim()) box.innerHTML = '<span style="color:#aaa">Click to add a comment…</span>';
+    });
+  });
+
+  // Search filter
+  const search = document.getElementById('notes-search');
+  if (search) search.addEventListener('input', () => {
+    const q = search.value.toLowerCase();
+    document.querySelectorAll('#notes-list .case-card').forEach(card => {
+      card.style.display = card.innerText.toLowerCase().includes(q) ? '' : 'none';
+    });
+  });
+}
+function markTag(id, on) {
+  const tag = document.querySelector(`[data-tag="${CSS.escape(id)}"]`);
+  if (tag) tag.classList.toggle('show', on);
+}
+function updateEditedCount() {
+  const n = FILTERED.filter(isEdited).length;
+  const el = document.getElementById('edited-count');
+  if (el) el.textContent = `${n} edited`;
+}
+function resetComments() {
+  if (!confirm('Reset every comment back to the original text from your upload? Your edits in this browser will be cleared.')) return;
+  COMMENTS = {}; saveComments(); render(); showBanner('Comments reset to original');
+}
+function exportComments() {
+  const rows = [['Account','Opp Name','Owner','Product Family','Stage','DNR Risk','Amount Saved','Comment','Edited?']];
+  FILTERED.forEach(r => {
+    rows.push([
+      r['Account Name']||'', r['Opp Name']||'', r['Owner']||'', r['Product Family']||'',
+      r['Opp Stage Name']||'', r['DNR Risk']||0, r['Amount Saved']||0,
+      effectiveComment(r).replace(/\r?\n/g,' '), isEdited(r) ? 'yes':'no'
+    ]);
+  });
+  const csv = rows.map(row => row.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const blob = new Blob([csv], { type:'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `GRR_Weekly_Comments_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+// ============================================================
+// 3 — CANCELLED PRODUCTS
+// ============================================================
+function renderCancelled() {
+  const lost = FILTERED.filter(isLost);
+  const lostVal = lost.reduce((s,r)=>s+(r['DNR Risk']||0),0);
+
+  // By product family
+  const byFam = {};
+  lost.forEach(r => {
+    const p = r['Product Family'] || '(unspecified)';
+    if (!byFam[p]) byFam[p] = { count:0, val:0, accounts:[] };
+    byFam[p].count++; byFam[p].val += (r['DNR Risk']||0);
+    byFam[p].accounts.push(r['Account Name']||r['Opp Name']||'—');
+  });
+  const famRows = Object.entries(byFam).sort((a,b)=>b[1].val-a[1].val);
+
+  // By top spend product (more granular if present)
+  const bySpend = {};
+  lost.forEach(r => {
+    const p = r['Top Spend Product'] || r['Product Family'] || '(unspecified)';
+    if (!bySpend[p]) bySpend[p] = { count:0, val:0 };
+    bySpend[p].count++; bySpend[p].val += (r['DNR Risk']||0);
+  });
+  const spendRows = Object.entries(bySpend).sort((a,b)=>b[1].val-a[1].val).slice(0,12);
+
+  let html = `
+    <div class="sheet">
+      <div class="sheet-title">CANCELLED PRODUCTS — THIS WEEK</div>
+      <div class="sheet-subtitle">${escapeHtml(teamName())}  |  ${escapeHtml(periodLabel())}  ·  ${lost.length} cancellation${lost.length===1?'':'s'} · ${fmtGBP(lostVal)} lost</div>`;
+
+  if (!lost.length) {
+    html += `<div class="callout info">✅ No cancellations (Closed Lost) in this view for the period. Nothing to analyse here — a good week.</div></div>`;
+    document.getElementById('pane-cancelled').innerHTML = html;
+    return;
+  }
+
+  html += `
+      <div class="section-header">1. CANCELLED VALUE BY PRODUCT FAMILY</div>
+      <table>
+        <thead><tr><th>Product Family</th><th class="num">Cancellations</th><th class="num">Value Lost (£)</th><th class="num">% of lost value</th><th>Accounts</th></tr></thead>
+        <tbody>
+          ${famRows.map(([p,v]) => `
+            <tr>
+              <td class="bold">${escapeHtml(p)}</td>
+              <td class="num">${v.count}</td>
+              <td class="num lost">${fmtGBP(v.val)}</td>
+              <td class="num">${lostVal>0?fmtPct(v.val/lostVal):'—'}</td>
+              <td style="font-size:11px;color:var(--text-muted)">${escapeHtml(v.accounts.slice(0,4).join('; '))}${v.accounts.length>4?` +${v.accounts.length-4}`:''}</td>
+            </tr>`).join('')}
+          <tr class="total"><td>TOTAL</td><td class="num">${lost.length}</td><td class="num">${fmtGBP(lostVal)}</td><td class="num">100%</td><td></td></tr>
+        </tbody>
+      </table>
+
+      <div class="chart-block">
+        <h3>Cancelled value by product family</h3>
+        <div class="chart-wrap tall"><canvas id="chart-cancelled"></canvas></div>
+      </div>
+
+      <div class="section-header">2. MOST-CANCELLED PRODUCTS (TOP SPEND PRODUCT)</div>
+      <table>
+        <thead><tr><th>Product</th><th class="num">Cancellations</th><th class="num">Value Lost (£)</th></tr></thead>
+        <tbody>
+          ${spendRows.map(([p,v]) => `
+            <tr><td class="bold">${escapeHtml(p)}</td><td class="num">${v.count}</td><td class="num lost">${fmtGBP(v.val)}</td></tr>`).join('')}
+        </tbody>
+      </table>
+
+      <div class="callout">⚠ Cancelled = cases closed as <strong>Closed Lost</strong> in this upload. The product family with the largest bar is where you are bleeding the most value this week — worth a root-cause look on the Churn Analysis tab.</div>
+    </div>`;
+  document.getElementById('pane-cancelled').innerHTML = html;
+
+  charts.cancelled = new Chart(document.getElementById('chart-cancelled'), {
+    type: 'bar',
+    data: { labels: famRows.map(([p])=>p),
+      datasets: [{ label:'Value lost', data: famRows.map(([,v])=>v.val), backgroundColor: ACCESS.red, borderRadius: 5 }] },
+    options: { indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
+      scales:{ x:{ ticks:{ callback:v=>'£'+(v/1000).toFixed(0)+'K' } } } }
+  });
+}
+
+// ============================================================
+// 4 — CHURN ANALYSIS (reason, reason×product)
+// ============================================================
+function renderChurn() {
+  const lost = FILTERED.filter(isLost);
+  const lostVal = lost.reduce((s,r)=>s+(r['DNR Risk']||0),0);
+
+  // By churn reason
+  const byReason = {};
+  lost.forEach(r => {
+    const c = (r['Cause'] || r['Case Reason'] || '(blank)').toString().trim() || '(blank)';
+    if (!byReason[c]) byReason[c] = { count:0, val:0, controllable: !UNCONTROLLABLE.has(c) };
+    byReason[c].count++; byReason[c].val += (r['DNR Risk']||0);
+  });
+  const reasonRows = Object.entries(byReason).sort((a,b)=>b[1].val-a[1].val);
+
+  const uncVal = reasonRows.filter(([,v])=>!v.controllable).reduce((s,[,v])=>s+v.val,0);
+  const ctrlVal = lostVal - uncVal;
+
+  // Reason × product matrix (top reasons vs top products)
+  const products = [...new Set(lost.map(r=>r['Product Family']||'(unspecified)'))];
+  const matrix = {};
+  lost.forEach(r => {
+    const reason = (r['Cause']||r['Case Reason']||'(blank)').toString().trim()||'(blank)';
+    const prod = r['Product Family']||'(unspecified)';
+    matrix[reason] = matrix[reason] || {};
+    matrix[reason][prod] = (matrix[reason][prod]||0) + (r['DNR Risk']||0);
+  });
+  const matrixReasons = reasonRows.map(([r])=>r);
+
+  const competitors = findCompetitorMentions(FILTERED);
+
+  let html = `
+    <div class="sheet">
+      <div class="sheet-title">CHURN ANALYSIS — WHY WE LOST</div>
+      <div class="sheet-subtitle">${escapeHtml(teamName())}  |  ${escapeHtml(periodLabel())}</div>`;
+
+  if (!lost.length) {
+    html += `<div class="callout info">✅ No losses recorded this period — no churn to analyse.</div></div>`;
+    document.getElementById('pane-churn').innerHTML = html;
+    return;
+  }
+
+  html += `
+      <div class="kpi-grid">
+        <div class="kpi-card red"><div class="kpi-label">Total Churn</div><div class="kpi-value red">${fmtGBP(lostVal)}</div><div class="kpi-sub">${lost.length} cancellation${lost.length===1?'':'s'}</div></div>
+        <div class="kpi-card"><div class="kpi-label">Controllable Churn</div><div class="kpi-value">${fmtGBP(ctrlVal)}</div><div class="kpi-sub">${lostVal>0?fmtPct(ctrlVal/lostVal):'—'} of total — addressable</div></div>
+        <div class="kpi-card plum"><div class="kpi-label">Uncontrollable Churn</div><div class="kpi-value">${fmtGBP(uncVal)}</div><div class="kpi-sub">ceased trading / M&A / product sunset</div></div>
+      </div>
+
+      <div class="section-header">1. CHURN REASONS — BY VALUE</div>
+      <table>
+        <thead><tr><th>Churn Reason</th><th class="num">Cases</th><th class="num">Value Lost (£)</th><th class="num">% of churn</th><th>Type</th></tr></thead>
+        <tbody>
+          ${reasonRows.map(([c,v]) => `
+            <tr>
+              <td class="bold">${escapeHtml(c)}</td>
+              <td class="num">${v.count}</td>
+              <td class="num lost">${fmtGBP(v.val)}</td>
+              <td class="num">${lostVal>0?fmtPct(v.val/lostVal):'—'}</td>
+              <td>${v.controllable?'<span class="badge">Controllable</span>':'<span class="badge grey">Uncontrollable</span>'}</td>
+            </tr>`).join('')}
+          <tr class="total"><td>TOTAL</td><td class="num">${lost.length}</td><td class="num">${fmtGBP(lostVal)}</td><td class="num">100%</td><td></td></tr>
+        </tbody>
+      </table>
+
+      <div class="chart-block">
+        <h3>Churn value by reason</h3>
+        <div class="chart-wrap tall"><canvas id="chart-reasons"></canvas></div>
+      </div>
+
+      <div class="section-header">2. CHURN REASON × PRODUCT FAMILY (value lost £)</div>
+      <div class="scrollable">
+      <table>
+        <thead><tr><th>Reason \\ Product</th>${products.map(p=>`<th class="num">${escapeHtml(p)}</th>`).join('')}<th class="num">Total</th></tr></thead>
+        <tbody>
+          ${matrixReasons.map(reason => {
+            const row = matrix[reason] || {};
+            const total = Object.values(row).reduce((s,v)=>s+v,0);
+            return `<tr>
+              <td class="bold">${escapeHtml(reason)}</td>
+              ${products.map(p => `<td class="num ${row[p]?'lost':''}">${row[p]?fmtGBP(row[p]):'—'}</td>`).join('')}
+              <td class="num bold">${fmtGBP(total)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+      </div>
+
+      ${competitors.length ? `
+      <div class="section-header">3. COMPETITORS NAMED IN NOTES</div>
+      <table>
+        <thead><tr><th>Competitor</th><th>Category</th><th class="num">Mentions</th><th class="num">Value at Risk (£)</th></tr></thead>
+        <tbody>
+          ${competitors.slice(0,8).map(c => `
+            <tr><td class="bold">${escapeHtml(c.name)}</td><td><span class="badge">${escapeHtml(c.category)}</span></td><td class="num">${c.opps}</td><td class="num lost">${fmtGBP(c.value)}</td></tr>`).join('')}
+        </tbody>
+      </table>` : ''}
+
+      <div class="callout">⚠ Controllable churn is where retention effort moves the needle. Cross-reference the reason×product matrix to see if a single product is driving a specific reason — that's your fastest fix.</div>
+    </div>`;
+  document.getElementById('pane-churn').innerHTML = html;
+
+  charts.reasons = new Chart(document.getElementById('chart-reasons'), {
+    type: 'bar',
+    data: { labels: reasonRows.map(([c])=>c),
+      datasets: [{ data: reasonRows.map(([,v])=>v.val),
+        backgroundColor: reasonRows.map(([,v])=>v.controllable?ACCESS.red:ACCESS.slate), borderRadius: 5 }] },
+    options: { indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false },
+      tooltip:{ callbacks:{ label: ctx => fmtGBP(ctx.raw) + (reasonRows[ctx.dataIndex][1].controllable?' (controllable)':' (uncontrollable)') } } },
+      scales:{ x:{ ticks:{ callback:v=>'£'+(v/1000).toFixed(0)+'K' } } } }
+  });
+}
+
+// ============================================================
+// 5 — TRENDS (within the week)
+// ============================================================
+function renderTrends() {
+  let html = `
+    <div class="sheet">
+      <div class="sheet-title">TRENDS — WITHIN THE WEEK</div>
+      <div class="sheet-subtitle">${escapeHtml(teamName())}  |  ${escapeHtml(periodLabel())}</div>`;
+
+  if (!PERIOD_START) {
+    html += `<div class="callout">No dates detected in the upload — cannot build day-by-day trends.</div></div>`;
+    document.getElementById('pane-trends').innerHTML = html;
+    return;
+  }
+
+  // Build day buckets from PERIOD_START..PERIOD_END (cap 14 days)
+  const days = [];
+  const cursor = new Date(PERIOD_START);
+  let guard = 0;
+  while (cursor <= PERIOD_END && guard < 31) {
+    const dStart = new Date(cursor); dStart.setHours(0,0,0,0);
+    const dEnd = new Date(cursor); dEnd.setHours(23,59,59,999);
+    days.push({ label: dStart.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short'}), start:dStart, end:dEnd });
+    cursor.setDate(cursor.getDate()+1); guard++;
+  }
+  const dayData = days.map(d => {
+    const inb  = FILTERED.filter(r => { const x=parseDate(r['Opp Created Date']); return x&&x>=d.start&&x<=d.end; });
+    const won  = FILTERED.filter(r => isWon(r)  && (()=>{const x=parseDate(r['Opp Won Lost Date']); return x&&x>=d.start&&x<=d.end;})());
+    const lost = FILTERED.filter(r => isLost(r) && (()=>{const x=parseDate(r['Opp Won Lost Date']); return x&&x>=d.start&&x<=d.end;})());
+    return { label:d.label,
+      inbCount:inb.length, inbVal:inb.reduce((s,r)=>s+(r['DNR Risk']||0),0),
+      wonVal:won.reduce((s,r)=>s+(r['Amount Saved']||0),0),
+      lostVal:lost.reduce((s,r)=>s+(r['DNR Risk']||0),0) };
+  });
+
+  // Theme trends (counts across the week)
+  const descs = FILTERED.map(r => r['Description']||'');
+  const themeRows = THEMES.map(t => {
+    const m = FILTERED.filter((r,i)=>t.pattern.test(descs[i]));
+    return { name:t.name, count:m.length, val:m.reduce((s,r)=>s+(r['DNR Risk']||0),0) };
+  }).filter(t=>t.count>0).sort((a,b)=>b.val-a.val);
+
+  const peakDay = [...dayData].sort((a,b)=>b.inbVal-a.inbVal)[0];
+
+  html += `
+      <div class="callout info">📈 ${peakDay && peakDay.inbVal>0 ? `Busiest intake day was <strong>${escapeHtml(peakDay.label)}</strong> with ${fmtGBP(peakDay.inbVal)} across ${peakDay.inbCount} case${peakDay.inbCount===1?'':'s'}.` : 'Day-by-day intake across the period is shown below.'} If your export covers a single week, this shows how the week built up day by day.</div>
+
+      <div class="section-header">1. DAY-BY-DAY — INCOMING DNR & OUTCOMES</div>
+      <table>
+        <thead><tr><th>Day</th><th class="num">Incoming Cases</th><th class="num">Incoming DNR (£)</th><th class="num">Saved (£)</th><th class="num">Lost (£)</th></tr></thead>
+        <tbody>
+          ${dayData.map(d => `
+            <tr>
+              <td class="bold">${escapeHtml(d.label)}</td>
+              <td class="num">${d.inbCount}</td>
+              <td class="num">${fmtGBP(d.inbVal)}</td>
+              <td class="num won">${fmtGBP(d.wonVal)}</td>
+              <td class="num lost">${fmtGBP(d.lostVal)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+
+      <div class="chart-block">
+        <h3>Incoming DNR by day</h3>
+        <div class="chart-wrap"><canvas id="chart-day-line"></canvas></div>
+      </div>
+
+      <div class="section-header">2. RECURRING THEMES IN NOTES (mined from Description)</div>
+      ${themeRows.length ? `
+      <table>
+        <thead><tr><th>Theme</th><th class="num">Cases</th><th class="num">Value at Risk (£)</th></tr></thead>
+        <tbody>
+          ${themeRows.map(t => `<tr><td class="bold">${escapeHtml(t.name)}</td><td class="num">${t.count}</td><td class="num">${fmtGBP(t.val)}</td></tr>`).join('')}
+        </tbody>
+      </table>
+      <div class="chart-block">
+        <h3>Theme value at risk</h3>
+        <div class="chart-wrap"><canvas id="chart-themes"></canvas></div>
+      </div>` : '<div class="callout">No recurring themes detected in the Description field this week.</div>'}
+    </div>`;
+  document.getElementById('pane-trends').innerHTML = html;
+
+  charts.dayLine = new Chart(document.getElementById('chart-day-line'), {
+    type: 'line',
+    data: { labels: dayData.map(d=>d.label),
+      datasets: [
+        { label:'Incoming DNR', data: dayData.map(d=>d.inbVal), borderColor:ACCESS.teal, backgroundColor:'rgba(245,158,11,0.15)', tension:0.3, fill:true, borderWidth:2.5, pointRadius:4 },
+        { label:'Lost', data: dayData.map(d=>d.lostVal), borderColor:ACCESS.red, tension:0.3, fill:false, borderWidth:2, pointRadius:3 },
+      ] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom' } },
+      scales:{ y:{ ticks:{ callback:v=>'£'+(v/1000).toFixed(0)+'K' } } } }
+  });
+
+  if (themeRows.length) {
+    charts.themes = new Chart(document.getElementById('chart-themes'), {
+      type:'bar',
+      data:{ labels: themeRows.map(t=>t.name),
+        datasets:[{ data: themeRows.map(t=>t.val), backgroundColor:ACCESS.teal, borderRadius:5 }] },
+      options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
+        scales:{ x:{ ticks:{ callback:v=>'£'+(v/1000).toFixed(0)+'K' } } } }
+    });
+  }
+}
+
+// ============================================================
+// 6 — EXECUTIVE EMAIL
+// ============================================================
+let LAST_EMAIL_TEXT = '';
+
+function renderEmail() {
+  const s = weekStats(FILTERED);
+  const wr = (s.wonVal+s.lostVal) > 0 ? s.wonVal/(s.wonVal+s.lostVal) : null;
+  const team = teamName();
+
+  // Top cancellations with (edited) comments
+  const topLost = [...s.lost].sort((a,b)=>(b['DNR Risk']||0)-(a['DNR Risk']||0)).slice(0,4);
+  // Top open risks
+  const topOpen = [...s.open].sort((a,b)=>(b['DNR Risk']||0)-(a['DNR Risk']||0)).slice(0,3);
+  // Top saves
+  const topWon = [...s.won].sort((a,b)=>(b['Amount Saved']||0)-(a['Amount Saved']||0)).slice(0,3);
+
+  // Churn reason leader
+  const byReason = {};
+  s.lost.forEach(r => { const c=(r['Cause']||r['Case Reason']||'(blank)').toString().trim()||'(blank)'; byReason[c]=(byReason[c]||0)+(r['DNR Risk']||0); });
+  const topReason = Object.entries(byReason).sort((a,b)=>b[1]-a[1])[0];
+
+  // Cancelled product leader
+  const byFam = {};
+  s.lost.forEach(r => { const p=r['Product Family']||'(unspecified)'; byFam[p]=(byFam[p]||0)+(r['DNR Risk']||0); });
+  const topFam = Object.entries(byFam).sort((a,b)=>b[1]-a[1])[0];
+
+  const competitors = findCompetitorMentions(FILTERED);
+
+  let opener;
+  if (wr === null) opener = 'Quiet week — no opportunities closed in the period.';
+  else if (wr >= 0.6) opener = 'Strong week — we defended the book well.';
+  else if (wr >= 0.4) opener = 'Mixed week — solid saves offset by some losses.';
+  else opener = 'Tough week — losses outweighed saves by value.';
+
+  const subject = `GRR Weekly Pulse — ${periodLabel()}${CURRENT_TEAM!=='__ALL__' ? ' · '+CURRENT_TEAM : ''}`;
+  const wrCell = wr!==null ? `<span style="color:${wr>=0.5?'#16A34A':'#E11D48'};font-weight:700">${fmtPct(wr)}</span>` : '<span style="color:#6B7280">n/a</span>';
+
+  const statRow = (label, count, val, colour) =>
+    `<tr><td style="font-weight:600">${label}</td><td>${count}</td><td>${colour?`<span style="color:${colour};font-weight:700">${fmtGBP(val)}</span>`:fmtGBP(val)}</td></tr>`;
+
+  let html = `
+    <div class="sheet">
+      <div class="sheet-title">EXECUTIVE EMAIL — WEEKLY PULSE</div>
+      <div class="sheet-subtitle">${escapeHtml(team)}  |  ${escapeHtml(periodLabel())}  ·  Ready to copy &amp; send</div>
+
+      <div class="ai-actions" style="max-width:760px;margin:16px auto 0">
+        <button class="ai-action-btn primary" onclick="copyEmail()">📋 Copy email text</button>
+        <button class="ai-action-btn" onclick="downloadEmail()">⬇ Download .txt</button>
+        <button class="ai-action-btn" onclick="window.print()">🖨 Print / PDF</button>
+      </div>
+
+      <div class="email-preview-wrap">
+        <div class="email-meta">
+          <div class="email-meta-row"><span class="lbl">To:</span><span class="val">[Leadership team]</span></div>
+          <div class="email-meta-row"><span class="lbl">CC:</span><span class="val">[Your manager / FBP]</span></div>
+          <div class="email-meta-row subj"><span class="lbl">Subject:</span><span class="val">${escapeHtml(subject)}</span></div>
+        </div>
+        <div class="email-body-content">
+          <p>Hi all,</p>
+          <p>${escapeHtml(opener)} Here is the GRR retention pulse for <strong>${escapeHtml(periodLabel())}</strong>.</p>
+
+          <div class="email-sh">The week in numbers</div>
+          <table class="email-stats-tbl">
+            <thead><tr><th style="text-align:left">Metric</th><th>Cases</th><th>Value (£)</th></tr></thead>
+            <tbody>
+              ${statRow('📥 Incoming (at-risk)', s.incCount, s.incVal, '')}
+              ${statRow('✅ Saved', s.wonCount, s.wonVal, '#16A34A')}
+              ${statRow('❌ Lost / cancelled', s.lostCount, s.lostVal, '#E11D48')}
+              ${statRow('⏳ Still open', s.openCount, s.openVal, '')}
+              <tr style="background:var(--teal-light)"><td style="font-weight:700">📊 Win rate (by value)</td><td>—</td><td>${wrCell}</td></tr>
+            </tbody>
+          </table>
+
+          ${topWon.length ? `
+          <div class="email-sh">Wins of the week</div>
+          ${topWon.map(r => `<div class="email-row"><strong>${escapeHtml(r['Account Name']||r['Opp Name']||'—')}</strong> — saved ${fmtGBP(r['Amount Saved'])}${shortComment(r)}</div>`).join('')}
+          ` : ''}
+
+          ${topLost.length ? `
+          <div class="email-sh" style="color:#E11D48">Cancellations to note</div>
+          ${topLost.map(r => `<div class="email-row red"><strong>${escapeHtml(r['Account Name']||r['Opp Name']||'—')}</strong> — ${fmtGBP(r['DNR Risk'])} lost${r['Cause']?` · ${escapeHtml(r['Cause'])}`:''}${shortComment(r)}</div>`).join('')}
+          ${topReason ? `<p style="margin-top:8px"><strong>Lead churn reason:</strong> ${escapeHtml(topReason[0])} (${fmtGBP(topReason[1])}).${topFam?` <strong>Most-cancelled product:</strong> ${escapeHtml(topFam[0])} (${fmtGBP(topFam[1])}).`:''}</p>` : ''}
+          ` : ''}
+
+          ${topOpen.length ? `
+          <div class="email-sh">Open risks to watch</div>
+          ${topOpen.map(r => `<div class="email-row"><strong>${escapeHtml(r['Account Name']||r['Opp Name']||'—')}</strong> — ${fmtGBP(r['DNR Risk'])} at risk${parseDate(r['Cancel Effective Date'])?` · cancels ${escapeHtml(formatDate(r['Cancel Effective Date']))}`:''}${shortComment(r)}</div>`).join('')}
+          ` : ''}
+
+          ${competitors.length ? `
+          <div class="email-sh">Competitor signal</div>
+          ${competitors.slice(0,3).map(c => `<div class="email-row"><strong>${escapeHtml(c.name)}</strong> (${escapeHtml(c.category)}) — ${c.opps} mention${c.opps===1?'':'s'}, ${fmtGBP(c.value)} at risk</div>`).join('')}
+          ` : ''}
+
+          <hr class="email-divider" />
+          <div class="email-sig">
+            <div>[Your name]</div>
+            <div>GRR Retention Team</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout info" style="max-width:760px;margin:16px auto">ℹ The "wins / cancellations / open risks" bullets pull the comment you see — including any edits you make on the <strong>Case Notes</strong> tab. Edit a note there, come back here, and the email updates.</div>
+    </div>`;
+  document.getElementById('pane-email').innerHTML = html;
+
+  // Plain text
+  let txt = `Subject: ${subject}\n\nHi all,\n\n${opener} Here is the GRR retention pulse for ${periodLabel()}.\n\n`;
+  txt += `━━━ THE WEEK IN NUMBERS ━━━\n`;
+  txt += `📥 Incoming (at-risk) : ${s.incCount} cases  |  ${fmtGBP(s.incVal)}\n`;
+  txt += `✅ Saved              : ${s.wonCount} cases  |  ${fmtGBP(s.wonVal)}\n`;
+  txt += `❌ Lost / cancelled   : ${s.lostCount} cases  |  ${fmtGBP(s.lostVal)}\n`;
+  txt += `⏳ Still open         : ${s.openCount} cases  |  ${fmtGBP(s.openVal)}\n`;
+  txt += `📊 Win rate (value)   : ${wr!==null?fmtPct(wr):'n/a'}\n`;
+  if (topWon.length) {
+    txt += `\n━━━ WINS OF THE WEEK ━━━\n`;
+    topWon.forEach(r => txt += `→ ${r['Account Name']||r['Opp Name']||'—'} — saved ${fmtGBP(r['Amount Saved'])}${shortCommentText(r)}\n`);
+  }
+  if (topLost.length) {
+    txt += `\n━━━ CANCELLATIONS TO NOTE ━━━\n`;
+    topLost.forEach(r => txt += `→ ${r['Account Name']||r['Opp Name']||'—'} — ${fmtGBP(r['DNR Risk'])} lost${r['Cause']?` · ${r['Cause']}`:''}${shortCommentText(r)}\n`);
+    if (topReason) txt += `Lead churn reason: ${topReason[0]} (${fmtGBP(topReason[1])}).${topFam?` Most-cancelled product: ${topFam[0]} (${fmtGBP(topFam[1])}).`:''}\n`;
+  }
+  if (topOpen.length) {
+    txt += `\n━━━ OPEN RISKS TO WATCH ━━━\n`;
+    topOpen.forEach(r => txt += `→ ${r['Account Name']||r['Opp Name']||'—'} — ${fmtGBP(r['DNR Risk'])} at risk${parseDate(r['Cancel Effective Date'])?` · cancels ${formatDate(r['Cancel Effective Date'])}`:''}${shortCommentText(r)}\n`);
+  }
+  if (competitors.length) {
+    txt += `\n━━━ COMPETITOR SIGNAL ━━━\n`;
+    competitors.slice(0,3).forEach(c => txt += `• ${c.name} (${c.category}) — ${c.opps} mention${c.opps===1?'':'s'}, ${fmtGBP(c.value)} at risk\n`);
+  }
+  txt += `\n—\n[Your name]\nGRR Retention Team\n`;
+  LAST_EMAIL_TEXT = txt;
+}
+
+function shortComment(r) {
+  const c = effectiveComment(r).replace(/\s+/g,' ').trim();
+  if (!c) return '';
+  const snip = c.length > 120 ? c.slice(0,120)+'…' : c;
+  return ` <span style="color:var(--text-muted)">— ${escapeHtml(snip)}</span>`;
+}
+function shortCommentText(r) {
+  const c = effectiveComment(r).replace(/\s+/g,' ').trim();
+  if (!c) return '';
+  const snip = c.length > 120 ? c.slice(0,120)+'…' : c;
+  return ` — ${snip}`;
+}
+
+function copyEmail() {
+  if (!LAST_EMAIL_TEXT) return;
+  navigator.clipboard.writeText(LAST_EMAIL_TEXT)
+    .then(() => showBanner('Email text copied to clipboard'))
+    .catch(() => showBanner('Could not copy', 'error'));
+}
+function downloadEmail() {
+  if (!LAST_EMAIL_TEXT) return;
+  const blob = new Blob([LAST_EMAIL_TEXT], { type:'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `GRR_Weekly_Pulse_Email_${new Date().toISOString().slice(0,10)}.txt`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+// ============================================================
+// EVENT WIRING
+// ============================================================
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.pane').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('pane-' + t.dataset.pane).classList.add('active');
+    // Email reflects latest comment edits whenever you open it
+    if (t.dataset.pane === 'email') renderEmail();
+  });
+});
+document.getElementById('team-filter').addEventListener('change', applyFilter);
+
+const input = document.getElementById('file-input'), zone = document.getElementById('upload-zone');
+input.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+zone.addEventListener('click',    () => input.click());
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragging'); });
+zone.addEventListener('dragleave',  () => zone.classList.remove('dragging'));
+zone.addEventListener('drop', e => {
+  e.preventDefault(); zone.classList.remove('dragging');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+</script>
+</body>
+</html>
