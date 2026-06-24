@@ -366,9 +366,12 @@ function normaliseRow(row) {
 }
 
 function detectPeriod() {
+  // Period = the activity window (when cases came in / were closed).
+  // Cancel Effective Date is deliberately excluded — it is often far in the
+  // future and would wrongly stretch a 7-day week into months.
   const dates = [];
   for (const r of RAW_DATA) {
-    ['Opp Created Date','Opp Won Lost Date','Cancel Effective Date'].forEach(f => {
+    ['Opp Created Date','Opp Won Lost Date'].forEach(f => {
       const d = parseDate(r[f]); if (d) dates.push(d);
     });
   }
